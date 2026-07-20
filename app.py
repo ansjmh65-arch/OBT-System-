@@ -1,6 +1,6 @@
 import os
 from threading import Thread
-from flask import Flask
+from flask import Flask, render_template
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.orm import declarative_base, sessionmaker
 import discord
@@ -28,15 +28,8 @@ Base.metadata.create_all(bind=engine)
 
 @app.route("/")
 def index():
-    return """
-    <html>
-        <head><title>OBT-System Dashboard</title></head>
-        <body style="font-family: Arial; background: #0f172a; color: white; text-align: center; padding-top: 80px;">
-            <h1>🚀 OBT-System Dashboard is Online!</h1>
-            <p>لوحة التحكم تعمل بنجاح ومتصلة بقاعدة البيانات.</p>
-        </body>
-    </html>
-    """
+    # يعرض صفحة index.html الموجودة داخل مجلد templates
+    return render_template("index.html")
 
 # إعداد بوت ديسكورد
 intents = discord.Intents.default()
@@ -50,7 +43,7 @@ async def on_ready():
 def run_discord_bot():
     token = os.environ.get("DISCORD_TOKEN")
     if not token:
-        print("❌ خطأ: لم يتم العثور على DISCORD_TOKEN!")
+        print("❌ خطأ: لم يتم العثور على DISCORD_TOKEN في متغيرات البيئة!")
         return
     try:
         bot.run(token)
@@ -58,11 +51,11 @@ def run_discord_bot():
         print(f"خطأ في تشغيل البوت: {e}")
 
 if __name__ == "__main__":
-    # تشغيل بوت ديسكورد في الخلفية
+    # تشغيل بوت ديسكورد في خلفية النظام (Background Thread)
     bot_thread = Thread(target=run_discord_bot)
     bot_thread.daemon = True
     bot_thread.start()
 
-    # تشغيل سيرفر الـ Flask على البورت المخصص من Railway
+    # تشغيل سيرفر الـ Flask واستقبال الاتصالات من Railway على البورت الصحيح
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
