@@ -14,6 +14,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 async def on_ready():
     print(f'Logged in as {bot.user.name}')
     print('Bot is ready and online!')
+import os
+# ... بقية الكود ...
+bot.run(os.environ.get('DISCORD_TOKEN'))
 
-# هنا ستضع أوامرك البرمجية لاحقاً باللغة الإنجليزية
-# bot.run('')
