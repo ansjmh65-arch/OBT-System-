@@ -2391,17 +2391,43 @@ class DashboardNotifications(Base, TimestampMixin):
         if self._conn:
             await self._conn.close()
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-DATABASE_URL = "postgresql+asyncpg://postgres:password@localhost/obt_system"
+# استخدام SQLite المتوافقة مع ملف obt_system.db الموجود لديك
+DATABASE_URL = "sqlite+aiosqlite:///obt_system.db"
 
-engine = create_async_engine(DATABASE_URL, echo=False, pool_size=30, max_overflow=15)
+engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 class Base(DeclarativeBase):
     pass
 
-async def get_db():
-    async with AsyncSessionLocal() as session:
-        yield session
+class GuildSettings(Base):
+    __tablename__ = "guild_settings"
+
+    guild_id: Mapped[int] = mapped_column(primary_key=True)
+    prefix: Mapped[str] = mapped_column(default="!")
+    
+    # إعدادات الحماية
+    anti_spam: Mapped[bool] = mapped_column(default=True)
+    anti_raid: Mapped[bool] = mapped_column(default=True)
+    anti_link: Mapped[bool] = mapped_column(default=False)
+    anti_scam: Mapped[bool] = mapped_column(default=True)
+    
+    # الإشراف والتذاكر
+    ticket_category_id: Mapped[int] = mapped_column(nullable=True)
+    welcome_message: Mapped[str] = mapped_column(default="أهلاً بك في السيرفر!")
+
+class UserEconomy(Base):
+    __tablename__ = "user_economy"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column()
+    user_id: Mapped[int] = mapped_column()
+    points: Mapped[int] = mapped_column(default=0)
+    level: Mapped[int] = mapped_column(default=1)
+
+async def init_db():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
         
