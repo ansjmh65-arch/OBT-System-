@@ -1,39 +1,578 @@
-"""
-Database Manager - إدارة قاعدة البيانات
-"""
+from datetime import datetime, timezone
+from sqlalchemy import (
+    Boolean, Column, DateTime, Float, ForeignKey, Integer,
+    String, Text, UniqueConstraint, Index
+)
+from sqlalchemy.orm import declarative_base, relationship
 
-import aiosqlite
-import asyncio
-import os
-from datetime import datetime
+Base = declarative_base()
 
-DB_PATH = os.getenv('DB_PATH', 'obt_system.db')
+class TimestampMixin:
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
 
-class Database:
-    def __init__(self):
-        self.db_path = DB_PATH
-        self._conn = None
+class GuildSettings(Base, TimestampMixin):
+    __tablename__ = 'guild_settings'
 
-    async def init(self):
-        self._conn = await aiosqlite.connect(self.db_path)
-        self._conn.row_factory = aiosqlite.Row
-        # Enable WAL mode to prevent database locked errors when dashboard reads concurrently
-        await self._conn.execute("PRAGMA journal_mode=WAL")
-        await self._conn.execute("PRAGMA busy_timeout=5000")
-        await self._conn.commit()
-        await self._create_tables()
+    guild_id = Column(String(32), primary_key=True, index=True)
+    prefix = Column(String(10), default="!", nullable=False)
+    language = Column(String(10), default="ar", nullable=False)
+    timezone = Column(String(50), default="UTC", nullable=False)
+    embed_color = Column(String(7), default="#5865F2", nullable=False)
+    dashboard_theme = Column(String(32), default="dark", nullable=False)
 
-    async def _create_tables(self):
-        queries = [
-            # Guild settings
-            """CREATE TABLE IF NOT EXISTS guilds (
-                guild_id INTEGER PRIMARY KEY,
-                prefix TEXT DEFAULT '!',
-                language TEXT DEFAULT 'ar',
-                log_channel INTEGER,
-                welcome_channel INTEGER,
-                welcome_message TEXT,
+    # Module toggles
+    security_enabled = Column(Boolean, default=False, nullable=False)
+    moderation_enabled = Column(Boolean, default=True, nullable=False)
+    tickets_enabled = Column(Boolean, default=False, nullable=False)
+    logs_enabled = Column(Boolean, default=False, nullable=False)
+    points_enabled = Column(Boolean, default=False, nullable=False)
+    clans_enabled = Column(Boolean, default=False, nullable=False)
+    creators_enabled = Column(Boolean, default=False, nullable=False)
+    economy_enabled = Column(Boolean, default=False, nullable=False)
+    leveling_enabled = Column(Boolean, default=False, nullable=False)
+    welcome_enabled = Column(Boolean, default=False, nullable=False)
+    automod_enabled = Column(Boolean, default=False, nullable=False)
+    backup_enabled = Column(Boolean, default=True, nullable=False)
+
+    # Relationships
+    security_settings = relationship("SecuritySettings", back_populates="guild", uselist=False, cascade="all, delete-orphan")
+    moderation_cases = relationship("ModerationCases", back_populates="guild", cascade="all, delete-orphan")
+    ticket_panels = relationship("TicketPanels", back_populates="guild", cascade="all, delete-orphan")
+    tickets = relationship("Tickets", back_populates="guild", cascade="all, delete-orphan")
+    economy_points = relationship("EconomyPoints", back_populates="guild", cascade="all, delete-orphan")
+    clans = relationship("ClanSystem", back_populates="guild", cascade="all, delete-orphan")
+    creator_programs = relationship("CreatorProgram", back_populates="guild", cascade="all, delete-orphan")
+    welcome_settings = relationship("WelcomeSettings", back_populates="guild", uselist=False, cascade="all, delete-orphan")
+    log_settings = relationship("LogSettings", back_populates="guild", uselist=False, cascade="all, delete-orphan")
+    audit_logs = relationship("DashboardAuditLogs", back_populates="guild", cascade="all, delete-orphan")
+    backups = relationship("Backups", back_populates="guild", cascade="all, delete-orphan")
+    scheduled_backups = relationship("ScheduledBackups", back_populates="guild", uselist=False, cascade="all, delete-orphan")
+    level_systems = relationship("LevelSystem", back_populates="guild", cascade="all, delete-orphan")
+    reaction_roles = relationship("ReactionRoles", back_populates="guild", cascade="all, delete-orphan")
+    auto_roles = relationship("AutoRoles", back_populates="guild", cascade="all, delete-orphan")
+    notifications = relationship("DashboardNotifications", back_populates="guild", cascade="all, delete-orphan")
+
+
+class SecuritySettings(Base, TimestampMixin):
+    __tablename__ = 'security_settings'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    anti_spam = Column(Boolean, default=False, nullable=False)
+    anti_spam_limit = Column(Integer, default=5, nullable=False)
+    anti_duplicate_messages = Column(Boolean, default=False, nullable=False)
+    anti_caps = Column(Boolean, default=False, nullable=False)
+    anti_mass_mentions = Column(Boolean, default=False, nullable=False)
+    anti_links = Column(Boolean, default=False, nullable=False)
+    anti_invites = Column(Boolean, default=False, nullable=False)
+    anti_bots = Column(Boolean, default=False, nullable=False)
+    anti_webhooks = Column(Boolean, default=False, nullable=False)
+    anti_scam = Column(Boolean, default=True, nullable=False)
+    anti_phishing = Column(Boolean, default=True, nullable=False)
+    anti_raid = Column(Boolean, default=False, nullable=False)
+    anti_mass_join = Column(Boolean, default=False, nullable=False)
+    anti_bad_words = Column(Boolean, default=False, nullable=False)
+    verification_enabled = Column(Boolean, default=False, nullable=False)
+    punishment_type = Column(String(32), default="timeout", nullable=False)
+    automod_config = Column(Text, default="{}", nullable=False)
+    whitelist = Column(Text, default="[]", nullable=False)
+    blacklist = Column(Text, default="[]", nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="security_settings")
+
+
+class ModerationCases(Base, TimestampMixin):
+    __tablename__ = 'moderation_cases'
+
+    case_id = Column(Integer, primary_key=True, autoincrement=True)
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = Column(String(32), nullable=False, index=True)
+    moderator_id = Column(String(32), nullable=False)
+    action = Column(String(32), nullable=False)
+    reason = Column(Text, nullable=True)
+    duration = Column(Integer, nullable=True)
+    active = Column(Boolean, default=True, nullable=False)
+    expires_at = Column(DateTime, nullable=True)
+
+    guild = relationship("GuildSettings", back_populates="moderation_cases")
+
+
+class TicketPanels(Base, TimestampMixin):
+    __tablename__ = 'ticket_panels'
+
+    panel_id = Column(Integer, primary_key=True, autoincrement=True)
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), nullable=False, index=True)
+    name = Column(String(64), nullable=False)
+    channel_id = Column(String(32), nullable=False)
+    category_id = Column(String(32), nullable=False)
+    transcript_channel = Column(String(32), nullable=True)
+    support_roles = Column(Text, default="[]", nullable=False)
+    questions = Column(Text, default="[]", nullable=False)
+    auto_close = Column(Boolean, default=False, nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="ticket_panels")
+    tickets = relationship("Tickets", back_populates="panel", cascade="all, delete-orphan")
+
+
+class Tickets(Base, TimestampMixin):
+    __tablename__ = 'tickets'
+
+    ticket_id = Column(Integer, primary_key=True, autoincrement=True)
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), nullable=False, index=True)
+    panel_id = Column(Integer, ForeignKey('ticket_panels.panel_id', ondelete='CASCADE'), nullable=False)
+    creator_id = Column(String(32), nullable=False, index=True)
+    channel_id = Column(String(32), nullable=False, unique=True)
+    claimed_by = Column(String(32), nullable=True)
+    status = Column(String(32), default="open", nullable=False)
+    rating = Column(Integer, nullable=True)
+    closed_at = Column(DateTime, nullable=True)
+
+    guild = relationship("GuildSettings", back_populates="tickets")
+    panel = relationship("TicketPanels", back_populates="tickets")
+
+
+class EconomyPoints(Base, TimestampMixin):
+    __tablename__ = 'economy_points'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    user_id = Column(String(32), primary_key=True, index=True)
+    points = Column(Integer, default=0, nullable=False)
+    total_earned = Column(Integer, default=0, nullable=False)
+    total_spent = Column(Integer, default=0, nullable=False)
+    season_id = Column(String(32), default="default", nullable=False)
+    last_daily = Column(DateTime, nullable=True)
+
+    guild = relationship("GuildSettings", back_populates="economy_points")
+
+
+class ClanSystem(Base, TimestampMixin):
+    __tablename__ = 'clan_system'
+
+    clan_id = Column(Integer, primary_key=True, autoincrement=True)
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), nullable=False, index=True)
+    owner_id = Column(String(32), nullable=False)
+    name = Column(String(64), nullable=False)
+    description = Column(Text, nullable=True)
+    logo = Column(String(255), nullable=True)
+    total_points = Column(Integer, default=0, nullable=False)
+    level = Column(Integer, default=1, nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="clans")
+    members = relationship("ClanMembers", back_populates="clan", cascade="all, delete-orphan")
+
+
+class ClanMembers(Base):
+    __tablename__ = 'clan_members'
+
+    clan_id = Column(Integer, ForeignKey('clan_system.clan_id', ondelete='CASCADE'), primary_key=True)
+    user_id = Column(String(32), primary_key=True, index=True)
+    role = Column(String(32), default="member", nullable=False)
+    joined_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    clan = relationship("ClanSystem", back_populates="members")
+
+
+class CreatorProgram(Base, TimestampMixin):
+    __tablename__ = 'creator_program'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    user_id = Column(String(32), primary_key=True, index=True)
+    platform = Column(String(32), nullable=False)
+    channel_url = Column(String(255), nullable=False)
+    followers = Column(Integer, default=0, nullable=False)
+    approved = Column(Boolean, default=False, nullable=False)
+    applied_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="creator_programs")
+
+
+class WelcomeSettings(Base, TimestampMixin):
+    __tablename__ = 'welcome_settings'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    welcome_channel = Column(String(32), nullable=True)
+    goodbye_channel = Column(String(32), nullable=True)
+    auto_role = Column(String(32), nullable=True)
+    welcome_embed = Column(Text, default="{}", nullable=False)
+    goodbye_embed = Column(Text, default="{}", nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="welcome_settings")
+
+
+class LogSettings(Base, TimestampMixin):
+    __tablename__ = 'log_settings'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    member_logs = Column(String(32), nullable=True)
+    message_logs = Column(String(32), nullable=True)
+    voice_logs = Column(String(32), nullable=True)
+    moderation_logs = Column(String(32), nullable=True)
+    role_logs = Column(String(32), nullable=True)
+    channel_logs = Column(String(32), nullable=True)
+    emoji_logs = Column(String(32), nullable=True)
+    sticker_logs = Column(String(32), nullable=True)
+    invite_logs = Column(String(32), nullable=True)
+    webhook_logs = Column(String(32), nullable=True)
+    server_logs = Column(String(32), nullable=True)
+    ticket_logs = Column(String(32), nullable=True)
+    security_logs = Column(String(32), nullable=True)
+    points_logs = Column(String(32), nullable=True)
+    clan_logs = Column(String(32), nullable=True)
+    creator_logs = Column(String(32), nullable=True)
+    backup_logs = Column(String(32), nullable=True)
+    dashboard_logs = Column(String(32), nullable=True)
+    command_logs = Column(String(32), nullable=True)
+    error_logs = Column(String(32), nullable=True)
+
+    guild = relationship("GuildSettings", back_populates="log_settings")
+
+
+class DashboardAuditLogs(Base):
+    __tablename__ = 'dashboard_audit_logs'
+
+    log_id = Column(Integer, primary_key=True, autoincrement=True)
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), nullable=False, index=True)
+    admin_id = Column(String(32), nullable=False)
+    action_type = Column(String(64), nullable=False)
+    page = Column(String(64), nullable=False)
+    old_value = Column(Text, nullable=True)
+    new_value = Column(Text, nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+
+    guild = relationship("GuildSettings", back_populates="audit_logs")
+
+
+class Backups(Base, TimestampMixin):
+    __tablename__ = 'backups'
+
+    backup_id = Column(String(64), primary_key=True)
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), nullable=False, index=True)
+    name = Column(String(64), nullable=False)
+    description = Column(Text, nullable=True)
+    file_name = Column(String(255), nullable=False)
+    file_path = Column(String(512), nullable=False)
+    file_size = Column(Integer, nullable=False)
+    created_by = Column(String(32), nullable=False)
+    automatic_backup = Column(Boolean, default=False, nullable=False)
+    version = Column(String(16), default="1.0", nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="backups")
+
+
+class ScheduledBackups(Base, TimestampMixin):
+    __tablename__ = 'scheduled_backups'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    enabled = Column(Boolean, default=False, nullable=False)
+    interval = Column(String(32), default="daily", nullable=False)
+    last_backup = Column(DateTime, nullable=True)
+    next_backup = Column(DateTime, nullable=True)
+    keep_last_backups = Column(Integer, default=5, nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="scheduled_backups")
+
+
+class LevelSystem(Base, TimestampMixin):
+    __tablename__ = 'level_system'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    user_id = Column(String(32), primary_key=True, index=True)
+    xp = Column(Integer, default=0, nullable=False)
+    level = Column(Integer, default=0, nullable=False)
+    total_messages = Column(Integer, default=0, nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="level_systems")
+
+
+class ReactionRoles(Base):
+    __tablename__ = 'reaction_roles'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    message_id = Column(String(32), primary_key=True, index=True)
+    emoji = Column(String(64), primary_key=True)
+    role_id = Column(String(32), nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="reaction_roles")
+
+
+class AutoRoles(Base):
+    __tablename__ = 'auto_roles'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    role_id = Column(String(32), primary_key=True)
+    bot_role = Column(Boolean, default=False, nullable=False)
+    human_role = Column(Boolean, default=True, nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="auto_roles")
+
+
+class DashboardNotifications(Base, TimestampMixin):
+    __tablename__ = 'dashboard_notifications'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), nullable=False, index=True)
+    title = Column(String(128), nullable=False)
+    message = Column(Text, nullable=False)
+    type = Column(String(32), default="info", nullable=False)
+    read = Column(Boolean, default=False, nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="notifications")
+    anti_bots = Column(Boolean, default=False, nullable=False)
+    anti_webhooks = Column(Boolean, default=False, nullable=False)
+    anti_scam = Column(Boolean, default=True, nullable=False)
+    anti_phishing = Column(Boolean, default=True, nullable=False)
+    anti_raid = Column(Boolean, default=False, nullable=False)
+    anti_mass_join = Column(Boolean, default=False, nullable=False)
+    anti_bad_words = Column(Boolean, default=False, nullable=False)
+    verification_enabled = Column(Boolean, default=False, nullable=False)
+    punishment_type = Column(String(32), default="timeout", nullable=False)
+    automod_config = Column(Text, default="{}", nullable=False)  # JSON stored as text for sqlite/postgres compatibility
+    whitelist = Column(Text, default="[]", nullable=False)
+    blacklist = Column(Text, default="[]", nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="security_settings")
+
+
+class ModerationCases(Base, TimestampMixin):
+    __tablename__ = 'moderation_cases'
+
+    case_id = Column(Integer, primary_key=True, autoincrement=True)
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = Column(String(32), nullable=False, index=True)
+    moderator_id = Column(String(32), nullable=False)
+    action = Column(String(32), nullable=False)  # ban, kick, timeout, warn
+    reason = Column(Text, nullable=True)
+    duration = Column(Integer, nullable=True)  # in seconds
+    active = Column(Boolean, default=True, nullable=False)
+    expires_at = Column(DateTime, nullable=True)
+
+    guild = relationship("GuildSettings", back_populates="moderation_cases")
+
+
+class TicketPanels(Base, TimestampMixin):
+    __tablename__ = 'ticket_panels'
+
+    panel_id = Column(Integer, primary_key=True, autoincrement=True)
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), nullable=False, index=True)
+    name = Column(String(64), nullable=False)
+    channel_id = Column(String(32), nullable=False)
+    category_id = Column(String(32), nullable=False)
+    transcript_channel = Column(String(32), nullable=True)
+    support_roles = Column(Text, default="[]", nullable=False)  # JSON list of role IDs
+    questions = Column(Text, default="[]", nullable=False)  # JSON questions list
+    auto_close = Column(Boolean, default=False, nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="ticket_panels")
+    tickets = relationship("Tickets", back_populates="panel", cascade="all, delete-orphan")
+
+
+class Tickets(Base, TimestampMixin):
+    __tablename__ = 'tickets'
+
+    ticket_id = Column(Integer, primary_key=True, autoincrement=True)
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), nullable=False, index=True)
+    panel_id = Column(Integer, ForeignKey('ticket_panels.panel_id', ondelete='CASCADE'), nullable=False)
+    creator_id = Column(String(32), nullable=False, index=True)
+    channel_id = Column(String(32), nullable=False, unique=True)
+    claimed_by = Column(String(32), nullable=True)
+    status = Column(String(32), default="open", nullable=False)  # open, closed, claimed
+    rating = Column(Integer, nullable=True)
+    closed_at = Column(DateTime, nullable=True)
+
+    guild = relationship("GuildSettings", back_populates="tickets")
+    panel = relationship("TicketPanels", back_populates="tickets")
+
+
+class EconomyPoints(Base, TimestampMixin):
+    __tablename__ = 'economy_points'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    user_id = Column(String(32), primary_key=True, index=True)
+    points = Column(Integer, default=0, nullable=False)
+    total_earned = Column(Integer, default=0, nullable=False)
+    total_spent = Column(Integer, default=0, nullable=False)
+    season_id = Column(String(32), default="default", nullable=False)
+    last_daily = Column(DateTime, nullable=True)
+
+    guild = relationship("GuildSettings", back_populates="economy_points")
+
+
+class ClanSystem(Base, TimestampMixin):
+    __tablename__ = 'clan_system'
+
+    clan_id = Column(Integer, primary_key=True, autoincrement=True)
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), nullable=False, index=True)
+    owner_id = Column(String(32), nullable=False)
+    name = Column(String(64), nullable=False)
+    description = Column(Text, nullable=True)
+    logo = Column(String(255), nullable=True)
+    total_points = Column(Integer, default=0, nullable=False)
+    level = Column(Integer, default=1, nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="clans")
+    members = relationship("ClanMembers", back_populates="clan", cascade="all, delete-orphan")
+
+
+class ClanMembers(Base):
+    __tablename__ = 'clan_members'
+
+    clan_id = Column(Integer, ForeignKey('clan_system.clan_id', ondelete='CASCADE'), primary_key=True)
+    user_id = Column(String(32), primary_key=True, index=True)
+    role = Column(String(32), default="member", nullable=False)  # owner, admin, member
+    joined_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    clan = relationship("ClanSystem", back_populates="members")
+
+
+class CreatorProgram(Base, TimestampMixin):
+    __tablename__ = 'creator_program'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    user_id = Column(String(32), primary_key=True, index=True)
+    platform = Column(String(32), nullable=False)  # youtube, twitch, tiktok, kick
+    channel_url = Column(String(255), nullable=False)
+    followers = Column(Integer, default=0, nullable=False)
+    approved = Column(Boolean, default=False, nullable=False)
+    applied_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="creator_programs")
+
+
+class WelcomeSettings(Base, TimestampMixin):
+    __tablename__ = 'welcome_settings'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    welcome_channel = Column(String(32), nullable=True)
+    goodbye_channel = Column(String(32), nullable=True)
+    auto_role = Column(String(32), nullable=True)
+    welcome_embed = Column(Text, default="{}", nullable=False)  # JSON text
+    goodbye_embed = Column(Text, default="{}", nullable=False)  # JSON text
+
+    guild = relationship("GuildSettings", back_populates="welcome_settings")
+
+
+class LogSettings(Base, TimestampMixin):
+    __tablename__ = 'log_settings'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    member_logs = Column(String(32), nullable=True)
+    message_logs = Column(String(32), nullable=True)
+    voice_logs = Column(String(32), nullable=True)
+    moderation_logs = Column(String(32), nullable=True)
+    role_logs = Column(String(32), nullable=True)
+    channel_logs = Column(String(32), nullable=True)
+    emoji_logs = Column(String(32), nullable=True)
+    sticker_logs = Column(String(32), nullable=True)
+    invite_logs = Column(String(32), nullable=True)
+    webhook_logs = Column(String(32), nullable=True)
+    server_logs = Column(String(32), nullable=True)
+    ticket_logs = Column(String(32), nullable=True)
+    security_logs = Column(String(32), nullable=True)
+    points_logs = Column(String(32), nullable=True)
+    clan_logs = Column(String(32), nullable=True)
+    creator_logs = Column(String(32), nullable=True)
+    backup_logs = Column(String(32), nullable=True)
+    dashboard_logs = Column(String(32), nullable=True)
+    command_logs = Column(String(32), nullable=True)
+    error_logs = Column(String(32), nullable=True)
+
+    guild = relationship("GuildSettings", back_populates="log_settings")
+
+
+class DashboardAuditLogs(Base):
+    __tablename__ = 'dashboard_audit_logs'
+
+    log_id = Column(Integer, primary_key=True, autoincrement=True)
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), nullable=False, index=True)
+    admin_id = Column(String(32), nullable=False)
+    action_type = Column(String(64), nullable=False)
+    page = Column(String(64), nullable=False)
+    old_value = Column(Text, nullable=True)
+    new_value = Column(Text, nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+
+    guild = relationship("GuildSettings", back_populates="audit_logs")
+
+
+class Backups(Base, TimestampMixin):
+    __tablename__ = 'backups'
+
+    backup_id = Column(String(64), primary_key=True)
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), nullable=False, index=True)
+    name = Column(String(64), nullable=False)
+    description = Column(Text, nullable=True)
+    file_name = Column(String(255), nullable=False)
+    file_path = Column(String(512), nullable=False)
+    file_size = Column(Integer, nullable=False)  # in bytes
+    created_by = Column(String(32), nullable=False)
+    automatic_backup = Column(Boolean, default=False, nullable=False)
+    version = Column(String(16), default="1.0", nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="backups")
+
+
+class ScheduledBackups(Base, TimestampMixin):
+    __tablename__ = 'scheduled_backups'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    enabled = Column(Boolean, default=False, nullable=False)
+    interval = Column(String(32), default="daily", nullable=False)  # daily, weekly
+    last_backup = Column(DateTime, nullable=True)
+    next_backup = Column(DateTime, nullable=True)
+    keep_last_backups = Column(Integer, default=5, nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="scheduled_backups")
+
+
+class LevelSystem(Base, TimestampMixin):
+    __tablename__ = 'level_system'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    user_id = Column(String(32), primary_key=True, index=True)
+    xp = Column(Integer, default=0, nullable=False)
+    level = Column(Integer, default=0, nullable=False)
+    total_messages = Column(Integer, default=0, nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="level_systems")
+
+
+class ReactionRoles(Base):
+    __tablename__ = 'reaction_roles'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    message_id = Column(String(32), primary_key=True, index=True)
+    emoji = Column(String(64), primary_key=True)
+    role_id = Column(String(32), nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="reaction_roles")
+
+
+class AutoRoles(Base):
+    __tablename__ = 'auto_roles'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    role_id = Column(String(32), primary_key=True)
+    bot_role = Column(Boolean, default=False, nullable=False)
+    human_role = Column(Boolean, default=True, nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="auto_roles")
+
+
+class DashboardNotifications(Base, TimestampMixin):
+    __tablename__ = 'dashboard_notifications'
+
+    id = Column(Integer, primary_key=Test := None or True, autoincrement=True) # or standard autoincrement int
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), nullable=False, index=True)
+    title = Column(String(128), nullable=False)
+    message = Column(Text, nullable=False)
+    type = Column(String(32), default="info", nullable=False)  # info, warning, success, error
+    read = Column(Boolean, default=False, nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="notifications")
                 welcome_image INTEGER DEFAULT 1,
                 goodbye_channel INTEGER,
                 goodbye_message TEXT,
