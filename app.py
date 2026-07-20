@@ -31,11 +31,7 @@ logger = logging.getLogger("OBT-System")
 # ==========================================
 # 2. التحقق من متغيرات البيئة والأمان (Security & Validation)
 # ==========================================
-SECRET_KEY = os.environ.get("SECRET_KEY")
-if not SECRET_KEY:
-    logger.critical("❌ خطأ أمني حرج: متغير البيئة SECRET_KEY غير موجود!")
-    raise ValueError("SECRET_KEY environment variable is missing.")
-
+SECRET_KEY = os.environ.get("SECRET_KEY", "obt_secure_key_2026")
 DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
 if not DISCORD_TOKEN:
     logger.critical("❌ خطأ أمني حرج: متغير البيئة DISCORD_TOKEN غير موجود!")
@@ -44,9 +40,9 @@ if not DISCORD_TOKEN:
 PORT = int(os.environ.get("PORT", 8080))
 
 # ==========================================
-# 3. إعداد تطبيق Flask
+# 3. إعداد تطبيق Flask (ربطه بمجلد القوالب العربي لديك)
 # ==========================================
-app = Flask(__name__, template_folder="templates", static_folder="static")
+app = Flask(__name__, template_folder="القوالب", static_folder="static")
 app.secret_key = SECRET_KEY
 
 # ==========================================
@@ -56,10 +52,9 @@ database_url = os.environ.get("DATABASE_URL", "sqlite:///obt_system_master.db")
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-# تحسين أداء الاتصال وقاعدة البيانات وإدارة Connection Pool
 engine = create_engine(
     database_url,
-    pool_pre_ping=True,  # فحص صحة الاتصال تلقائياً
+    pool_pre_ping=True,
     pool_recycle=3600,
     future=True
 )
@@ -167,34 +162,18 @@ class CentralLogModel(Base):
 
 Base.metadata.create_all(bind=engine)
 
-# إدارة الجلسات بشكل آمن (Context Manager)
-def get_db() -> Generator:
-    db = SessionLocal()
-    try:
-        yield db
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.error(f"خطأ في قاعدة البيانات: {e}", exc_info=True)
-        raise
-    finally:
-        db.close()
-
 def log_event(guild_id: int, category: str, action_type: str, details: str, user_id: Optional[int] = None, severity: str = "INFO"):
     db = SessionLocal()
     try:
         new_log = CentralLogModel(
-            guild_id=guild_id, 
-            category=category, 
-            action_type=action_type,
-            user_id=user_id, 
-            details=details, 
-            severity=severity
+            guild_id=guild_id, category=category, action_type=action_type,
+            user_id=user_id, details=details, severity=severity
         )
         db.add(new_log)
         db.commit()
     except Exception as e:
         db.rollback()
-        logger.error(f"فشل تسجيل الحدث في السجلات المركزية: {e}", exc_info=True)
+        logger.error(f"فشل تسجيل الحدث: {e}", exc_info=True)
     finally:
         db.close()
 
@@ -210,7 +189,7 @@ def format_welcome_message(template: str, member: discord.Member) -> str:
     )
 
 # ==========================================
-# 5. إعداد بوت ديسكورد والأحداث المحسنة
+# 5. إعداد بوت ديسكورد والأحداث
 # ==========================================
 intents = discord.Intents.default()
 intents.message_content = True
@@ -233,24 +212,6 @@ async def on_member_join(member: discord.Member):
     db = SessionLocal()
     try:
         settings = db.query(WelcomeSettingsModel).filter_by(guild_id=member.guild.id).first()
-        auto_roles = db.query(AutoRoleModel).filter_by(guild_id=member.guild.id).all()
-        
-        for ar in auto_roles:
-            role = member.guild.get_role(ar.role_id)
-            if not role:
-                continue
-            if ar.role_type == "bot" and not member.bot:
-                continue
-            if ar.role_type == "human" and member.bot:
-                continue
-            try:
-                if member.guild.me.guild_permissions.manage_roles and member.guild.me.top_role > role:
-                    await member.add_roles(role, reason="OBT System - Auto Role")
-                else:
-                    logger.warning(f"⚠️ صلاحيات غير كافية لتعيين الرتبة التلقائية في السيرفر {member.guild.id}")
-            except discord.HTTPException as e:
-                logger.error(f"فشل تعيين الرتبة التلقائية للعضو {member.id}: {e}", exc_info=True)
-
         if settings and settings.welcome_enabled and settings.welcome_channel_id:
             channel = member.guild.get_channel(settings.welcome_channel_id)
             if isinstance(channel, discord.TextChannel):
@@ -260,40 +221,14 @@ async def on_member_join(member: discord.Member):
                         color_val = int(settings.embed_color.lstrip('#'), 16)
                     except ValueError:
                         color_val = 0x6366f1
-                    
                     embed = discord.Embed(title="🎉 أهلاً بك في السيرفر!", description=formatted_text, color=color_val)
                     embed.set_thumbnail(url=member.display_avatar.url)
-                    try:
-                        await channel.send(content=member.mention, embed=embed)
-                    except discord.HTTPException as e:
-                        logger.error(f"فشل إرسال رسالة الترحيب (Embed): {e}", exc_info=True)
+                    await channel.send(content=member.mention, embed=embed)
                 else:
-                    try:
-                        await channel.send(formatted_text)
-                    except discord.HTTPException as e:
-                        logger.error(f"فشل إرسال رسالة الترحيب (Text): {e}", exc_info=True)
+                    await channel.send(formatted_text)
                 log_event(member.guild.id, "Member", "Welcome Sent", f"ترحيب بالعضو {member}.", member.id)
     except Exception as e:
-        logger.error(f"خطأ غير متوقع في معالجة دخول العضو: {e}", exc_info=True)
-    finally:
-        db.close()
-
-@bot.event
-async def on_member_remove(member: discord.Member):
-    db = SessionLocal()
-    try:
-        settings = db.query(WelcomeSettingsModel).filter_by(guild_id=member.guild.id).first()
-        if settings and settings.goodbye_enabled and settings.goodbye_channel_id:
-            channel = member.guild.get_channel(settings.goodbye_channel_id)
-            if isinstance(channel, discord.TextChannel):
-                formatted_text = format_welcome_message(settings.goodbye_message, member)
-                try:
-                    await channel.send(formatted_text)
-                except discord.HTTPException as e:
-                    logger.error(f"فشل إرسال رسالة المغادرة: {e}", exc_info=True)
-                log_event(member.guild.id, "Member", "Goodbye Sent", f"مغادرة العضو {member}.", member.id)
-    except Exception as e:
-        logger.error(f"خطأ غير متوقع في معالجة مغادرة العضو: {e}", exc_info=True)
+        logger.error(f"خطأ في دخول العضو: {e}", exc_info=True)
     finally:
         db.close()
 
@@ -309,40 +244,32 @@ async def on_message(message):
             user_rec = UserModel(guild_id=message.guild.id, user_id=message.author.id, xp=0, level=1)
             db.add(user_rec)
         
-        # نظام XP دقيق: منع تجاوز الحدود، الاحتفاظ بالخبرة الزائدة (Carry-over XP)، دعم الترقية المتعددة
         earned_xp = random.randint(15, 25)
         user_rec.xp += earned_xp
         
-        leveled_up = False
         while user_rec.xp >= (user_rec.level * 100):
             user_rec.xp -= (user_rec.level * 100)
             user_rec.level += 1
-            leveled_up = True
             log_event(message.guild.id, "Leveling", "Level Up", f"ترقى العضو {message.author} إلى المستوى {user_rec.level}.", message.author.id)
             
         db.commit()
     except Exception as e:
         db.rollback()
-        logger.error(f"خطأ في نظام معالجة الخبرة XP: {e}", exc_info=True)
+        logger.error(f"خطأ في نظام XP: {e}", exc_info=True)
     finally:
         db.close()
         
     await bot.process_commands(message)
 
 # ==========================================
-# 6. أوامر السلاش المتكاملة والآمنة
+# 6. أوامر السلاش
 # ==========================================
-@bot.tree.command(name="إعداد_الترحيب", description="تحديد قناة ورسالة الترحيب الخاصة بالسيرفر")
-@app_commands.describe(القناة="قناة ديسكورد المخصصة لإرسال الترحيب")
+@bot.tree.command(name="إعداد_الترحيب", description="تحديد قناة الترحيب")
+@app_commands.describe(القناة="قناة ديسكورد للترحيب")
 async def slash_setup_welcome(interaction: discord.Interaction, القناة: discord.TextChannel):
-    if not interaction.guild or not interaction.user:
-        await interaction.response.send_message("❌ هذا الأمر يستخدم داخل السيرفرات فقط.", ephemeral=True)
-        return
-    
     if not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("❌ عذراً، تتطلب صلاحية **مدير** لاستخدام هذا الأمر.", ephemeral=True)
+        await interaction.response.send_message("❌ يتطلب صلاحية مدير.", ephemeral=True)
         return
-        
     db = SessionLocal()
     try:
         settings = db.query(WelcomeSettingsModel).filter_by(guild_id=interaction.guild_id).first()
@@ -352,96 +279,34 @@ async def slash_setup_welcome(interaction: discord.Interaction, القناة: di
         settings.welcome_channel_id = القناة.id
         settings.welcome_enabled = True
         db.commit()
-        await interaction.response.send_message(f"✅ **تم تحديث قناة الترحيب بنجاح!** القناة: {القناة.mention}", ephemeral=True)
-    except Exception as e:
-        db.rollback()
-        logger.error(f"خطأ في إعداد الترحيب: {e}", exc_info=True)
-        await interaction.response.send_message("❌ حدث خطأ داخلي أثناء حفظ الإعدادات.", ephemeral=True)
-    finally:
-        db.close()
-
-@bot.tree.command(name="إعداد_المغادرة", description="تحديد قناة ورسالة مغادرة الأعضاء")
-@app_commands.describe(القناة="قناة ديسكورد المخصصة للمغادرة")
-async def slash_setup_goodbye(interaction: discord.Interaction, القناة: discord.TextChannel):
-    if not interaction.guild or not interaction.user:
-        await interaction.response.send_message("❌ هذا الأمر يستخدم داخل السيرفرات فقط.", ephemeral=True)
-        return
-        
-    if not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("❌ عذراً، تتطلب صلاحية **مدير** لاستخدام هذا الأمر.", ephemeral=True)
-        return
-        
-    db = SessionLocal()
-    try:
-        settings = db.query(WelcomeSettingsModel).filter_by(guild_id=interaction.guild_id).first()
-        if not settings:
-            settings = WelcomeSettingsModel(guild_id=interaction.guild_id)
-            db.add(settings)
-        settings.goodbye_channel_id = القناة.id
-        settings.goodbye_enabled = True
-        db.commit()
-        await interaction.response.send_message(f"✅ **تم تحديث قناة المغادرة بنجاح!** القناة: {القناة.mention}", ephemeral=True)
-    except Exception as e:
-        db.rollback()
-        logger.error(f"خطأ في إعداد المغادرة: {e}", exc_info=True)
-        await interaction.response.send_message("❌ حدث خطأ داخلي أثناء حفظ الإعدادات.", ephemeral=True)
-    finally:
-        db.close()
-
-@bot.tree.command(name="تقديم_صانع_محتوى", description="التقديم للانضمام إلى برنامج صناع المحتوى المعتمد")
-@app_commands.describe(المنصة="المنصة الأساسية لصناعة المحتوى", رابط_الملف="رابط حسابك الشخصي (URL صحيح)", المتابعون="عدد المتابعين التقريبي", التصنيف="تصنيف المحتوى")
-@app_commands.choices(المنصة=[
-    app_commands.Choice(name="YouTube", value="YouTube"),
-    app_commands.Choice(name="TikTok", value="TikTok"),
-    app_commands.Choice(name="Twitch", value="Twitch"),
-    app_commands.Choice(name="Kick", value="Kick")
-])
-async def slash_apply_creator(interaction: discord.Interaction, المنصة: str, رابط_الملف: str, المتابعون: int, التصنيف: str):
-    if not interaction.guild or not interaction.user:
-        await interaction.response.send_message("❌ هذا الأمر يستخدم داخل السيرفرات فقط.", ephemeral=True)
-        return
-
-    # التحقق من صحة رابط الملف الشخصي
-    url_regex = re.compile(r'^https?://[^\s/$.?#].[^\s]*$', re.IGNORECASE)
-    if not url_regex.match(رابط_الملف):
-        await interaction.response.send_message("❌ رابط الملف الشخصي غير صالح. يرجى إدخال رابط يبدأ بـ http:// أو https://", ephemeral=True)
-        return
-
-    if المتابعون < 0:
-        await interaction.response.send_message("❌ عدد المتابعين لا يمكن أن يكون سالباً.", ephemeral=True)
-        return
-
-    db = SessionLocal()
-    try:
-        existing = db.query(CreatorApplicationModel).filter_by(guild_id=interaction.guild_id, user_id=interaction.user.id).first()
-        if existing:
-            await interaction.response.send_message("❌ لديك طلب سابق مسجل بالفعل في نظام صناع المحتوى.", ephemeral=True)
-            return
-
-        new_app = CreatorApplicationModel(
-            guild_id=interaction.guild_id, 
-            user_id=interaction.user.id,
-            platform=المنصة, 
-            profile_url=رابط_الملف, 
-            followers_count=المتابعون,
-            content_category=التصنيف, 
-            status="PENDING"
-        )
-        db.add(new_app)
-        db.commit()
-        await interaction.response.send_message("✅ **تم إرسال طلبك بنجاح!** سيتم مراجعته من الإدارة قريباً.", ephemeral=True)
-    except Exception as e:
-        db.rollback()
-        logger.error(f"خطأ في تقديم صانع المحتوى: {e}", exc_info=True)
-        await interaction.response.send_message("❌ حدث خطأ داخلي أثناء معالجة الطلب.", ephemeral=True)
+        await interaction.response.send_message(f"✅ تم تحديث قناة الترحيب إلى {القناة.mention}", ephemeral=True)
     finally:
         db.close()
 
 # ==========================================
-# 7. مسارات Flask والداشبورد الآمنة (Render Template)
+# 7. مسارات Flask والداشبورد
 # ==========================================
 @app.route("/dashboard/<int:guild_id>")
 def master_dashboard(guild_id):
     try:
         return render_template("dashboard.html", guild_id=guild_id)
+    except Exception as e:
+        logger.error(f"خطأ في عرض الداشبورد: {e}", exc_info=True)
+        abort(500)
+
+# ==========================================
+# 8. التشغيل المتوازي
+# ==========================================
+def run_discord_bot():
+    try:
+        bot.run(DISCORD_TOKEN)
+    except Exception as e:
+        logger.critical(f"❌ فشل تشغيل البوت: {e}", exc_info=True)
+
+if __name__ == "__main__":
+    bot_thread = Thread(target=run_discord_bot, daemon=True)
+    bot_thread.start()
+
+    logger.info(f"🚀 بدء تشغيل خادم Flask على المنفذ {PORT}...")
+    app.run(host="0.0.0.0", port=PORT)
     
