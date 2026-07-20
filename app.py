@@ -5,20 +5,22 @@ from discord.ext import commands
 from flask import Flask, render_template
 
 # ==========================================
-# 1. إعداد مسارات Flask الأساسية (لحل مشكلة Railway نهائياً)
+# 1. إعداد مسارات Flask الأساسية (المحدثة لحل مشكلة Railway نهائياً)
 # ==========================================
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_DIR = os.path.join(BASE_DIR, 'templates')
-STATIC_DIR = os.path.join(BASE_DIR, 'static') # إذا كان لديك ملفات CSS أو صور
+STATIC_DIR = os.path.join(BASE_DIR, 'static') 
 
 app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
 
 # ==========================================
-# 2. إعدادات بوت الديسكورد
+# 2. إعدادات بوت الديسكورد والصلاحيات (Intents)
 # ==========================================
 intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True # ضروري لكي يتعرف البوت على السيرفرات
+intents.members = True # تفعيلها في الكود لتتوافق مع إعدادات حساب المطورين الخاص بك
+
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ==========================================
@@ -88,11 +90,7 @@ if __name__ == "__main__":
     # جلب التوكن من متغيرات البيئة (يفضل وضع توكن البوت في Railway Variables)
     TOKEN = os.environ.get("DISCORD_TOKEN")
     
-    # يمكنك وضع التوكن الخاص بك مباشرة هنا مؤقتاً إذا لم تكن تستخدم Railway Variables
-    # TOKEN = "ضع_التوكن_هنا"
-    
     if TOKEN:
         bot.run(TOKEN)
     else:
         print("❌ لم يتم العثور على توكن البوت! الرجاء إضافته.")
-    
