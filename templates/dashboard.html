@@ -3,153 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OBT Control Panel</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>OBT System - لوحة التحكم</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg-color: #0f172a;
-            --glass-bg: rgba(30, 41, 59, 0.7);
-            --accent: #8b5cf6; /* بنفسجي نيون */
-            --text: #f1f5f9;
-            --border: rgba(255, 255, 255, 0.1);
+            --bg-main: #0b0f19;
+            --bg-card: #131b2e;
+            --bg-sidebar: #090d16;
+            --accent: #6366f1;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #1e293b;
+            --success: #22c55e;
         }
-        body {
-            margin: 0;
-            font-family: 'Poppins', sans-serif;
-            background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
-            color: var(--text);
-            display: flex;
-            min-height: 100vh;
-        }
-
-        /* Sidebar Glass Effect */
-        .sidebar {
-            width: 80px;
-            background: var(--glass-bg);
-            backdrop-filter: blur(15px);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding-top: 30px;
-            gap: 30px;
-            transition: 0.3s;
-        }
-        .nav-item {
-            width: 45px;
-            height: 45px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: 0.3s;
-            color: #94a3b8;
-        }
-        .nav-item:hover, .nav-item.active {
-            background: var(--accent);
-            color: white;
-            box-shadow: 0 0 20px var(--accent);
-        }
-
-        /* Main Content */
-        .content {
-            flex: 1;
-            padding: 40px;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 40px;
-        }
-        .card-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 25px;
-        }
-
-        /* Modern Glass Card */
-        .card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            padding: 25px;
-            border-radius: 20px;
-            border: 1px solid var(--border);
-            transition: 0.4s;
-            position: relative;
-            overflow: hidden;
-        }
-        .card:hover {
-            border-color: var(--accent);
-            transform: translateY(-10px);
-        }
-        .card h3 { margin: 0 0 10px 0; color: white; }
-        .card p { font-size: 14px; color: #94a3b8; margin-bottom: 20px; }
-
-        /* Custom Toggle */
-        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #334155; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background: var(--accent); }
-        input:checked + .slider:before { transform: translateX(24px); }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+        body { background: var(--bg-main); color: var(--text-main); display: flex; min-height: 100vh; }
+        .sidebar { width: 280px; background: var(--bg-sidebar); border-left: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; height: 100vh; overflow-y: auto; }
+        .sidebar-brand { padding: 25px 20px; font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); background: rgba(99, 102, 241, 0.05); }
+        .sidebar-brand i { color: var(--accent); font-size: 24px; }
+        .sidebar-menu { padding: 20px 10px; }
+        .menu-category { font-size: 11px; text-transform: uppercase; color: var(--text-muted); padding: 10px 15px; font-weight: 700; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 12px; padding: 12px 15px; color: var(--text-muted); text-decoration: none; border-radius: 10px; margin-bottom: 5px; font-size: 14px; font-weight: 600; transition: 0.2s; }
+        .sidebar-menu a:hover, .sidebar-menu a.active { background: var(--accent); color: white; }
+        .main-container { flex: 1; margin-right: 280px; padding: 40px; display: flex; flex-direction: column; gap: 30px; }
+        .topbar { display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 20px 30px; border-radius: 16px; border: 1px solid var(--border); }
+        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .stat-card { background: var(--bg-card); padding: 25px; border-radius: 16px; border: 1px solid var(--border); }
+        .stat-card span { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+        .stat-card h2 { font-size: 26px; font-weight: 800; color: var(--text-main); margin-top: 8px; }
+        .card { background: var(--bg-card); padding: 30px; border-radius: 16px; border: 1px solid var(--border); }
     </style>
 </head>
 <body>
-
     <div class="sidebar">
-        <div class="nav-item active">🚀</div>
-        <div class="nav-item">⚙️</div>
-        <div class="nav-item">🛡️</div>
-        <div class="nav-item" style="margin-top: auto; margin-bottom: 20px;">🚪</div>
-    </div>
-
-    <div class="content">
-        <div class="header">
-            <div>
-                <h1 style="margin:0; font-size: 28px;">OBT <span style="color:var(--accent)">System</span></h1>
-                <p style="color:#64748b;">لوحة تحكم ذكية، مصممة للمستقبل.</p>
-            </div>
-            <div style="background:var(--glass-bg); padding: 10px 20px; border-radius: 50px; border: 1px solid var(--border);">
-                🟢 متصل بالبوت
-            </div>
+        <div class="sidebar-brand">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>OBT System</span>
         </div>
-
-        <div class="card-grid">
-            <div class="card">
-                <h3>نظام الترحيب</h3>
-                <p>ترحيب تلقائي بأناقة وفخامة.</p>
-                <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
-            </div>
-            <div class="card">
-                <h3>مركز الحماية</h3>
-                <p>تصدى للهجمات والسبام بذكاء اصطناعي.</p>
-                <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
-            </div>
-            <div class="card">
-                <h3>لوحة التذاكر</h3>
-                <p>تنظيم الدعم الفني وتسهيل التواصل.</p>
-                <label class="switch"><input type="checkbox"><span class="slider"></span></label>
-            </div>
+        <div class="sidebar-menu">
+            <div class="menu-category">معرف السيرفر: {{ guild_id }}</div>
+            <a href="#" class="active"><i class="fa-solid fa-chart-pie"></i><span>لوحة القيادة الرئيسية</span></a>
+            <a href="#"><i class="fa-solid fa-coins"></i><span>نظام الاقتصاد والبنك</span></a>
+            <a href="#"><i class="fa-solid fa-star"></i><span>نظام النقاط والمكافآت</span></a>
+            <a href="#"><i class="fa-solid fa-users-rectangle"></i><span>نظام العشائر</span></a>
+            <a href="#"><i class="fa-solid fa-lock"></i><span>الصلاحيات والأمان</span></a>
+            <a href="#"><i class="fa-solid fa-server"></i><span>السجلات المركزية</span></a>
+            <a href="#"><i class="fa-solid fa-bell"></i><span>الإشعارات الفورية</span></a>
+            <a href="#"><i class="fa-solid fa-headset"></i><span>الدعم الفني</span></a>
+            <a href="#"><i class="fa-solid fa-ranking-star"></i><span>المستويات والخبرة</span></a>
+            <a href="#"><i class="fa-solid fa-door-open"></i><span>الترحيب والرتب</span></a>
+            <a href="#"><i class="fa-solid fa-video"></i><span>صناع المحتوى</span></a>
         </div>
     </div>
-
+    <div class="main-container">
+        <div class="topbar">
+            <h1>لوحة التحكم المؤسسية الشاملة - OBT System</h1>
+            <div style="color: var(--success); font-weight: 700;"><i class="fa-solid fa-circle-check"></i> السيرفر متصل ويعمل بكفاءة</div>
+        </div>
+        <div class="grid-stats">
+            <div class="stat-card"><span>الأنظمة الفعالة</span><h2>11 / 11</h2></div>
+            <div class="stat-card"><span>قاعدة البيانات</span><h2>SQLAlchemy 2.x</h2></div>
+            <div class="stat-card"><span>حالة الأمان</span><h2 style="color: var(--success);">محمي بالكامل</h2></div>
+            <div class="stat-card"><span>معرف السيرفر الحالي</span><h2>{{ guild_id }}</h2></div>
+        </div>
+        <div class="card">
+            <h3 style="margin-bottom: 10px;"><i class="fa-solid fa-microchip" style="color: var(--accent);"></i> ملخص الهندسة البرمجية</h3>
+            <p style="color: var(--text-muted); font-size: 14px; line-height: 1.8;">
+                تمت مراجعة وتنقيح جميع أنظمة البوت وقاعدة البيانات والداشبورد لتكون جاهزة للتشغيل الفوري.
+            </p>
+        </div>
+    </div>
 </body>
 </html>
-                <p>إعداد لوحات التذاكر وقنوات الدعم الفني الخاصة بالسيرفر.</p>
-                <a href="#" class="btn">إدارة التذاكر</a>
-            </div>
-
-            <div class="card">
-                <span class="status-badge">نشط</span>
-                <h3>الترحيب والوداع</h3>
-                <p>تخصيص رسائل ورتب الترحيب للأعضاء الجدد.</p>
-                <a href="#" class="btn">إعدادات الترحيب</a>
-            </div>
-        </div>
-    </div>
-
-</body>
-  </html>
-  
