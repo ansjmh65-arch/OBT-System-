@@ -1,82 +1,19 @@
-from datetime import datetime, timezone
-from sqlalchemy import (
-    Boolean, Column, DateTime, Float, ForeignKey, Integer,
-    String, Text, UniqueConstraint, Index
-)
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy import Column, Integer, String, create_engine
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
-class TimestampMixin:
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
-
-
-class GuildSettings(Base, TimestampMixin):
+class GuildSettings(Base):
     __tablename__ = 'guild_settings'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    guild_id = Column(String(32), unique=True, nullable=False)
+    prefix = Column(String(10), default="!")
+    language = Column(String(10), default="ar")
 
-    guild_id = Column(String(32), primary_key=True, index=True)
-    prefix = Column(String(10), default="!", nullable=False)
-    language = Column(String(10), default="ar", nullable=False)
-    timezone = Column(String(50), default="UTC", nullable=False)
-    embed_color = Column(String(7), default="#5865F2", nullable=False)
-    dashboard_theme = Column(String(32), default="dark", nullable=False)
-
-    # Module toggles
-    security_enabled = Column(Boolean, default=False, nullable=False)
-    moderation_enabled = Column(Boolean, default=True, nullable=False)
-    tickets_enabled = Column(Boolean, default=False, nullable=False)
-    logs_enabled = Column(Boolean, default=False, nullable=False)
-    points_enabled = Column(Boolean, default=False, nullable=False)
-    clans_enabled = Column(Boolean, default=False, nullable=False)
-    creators_enabled = Column(Boolean, default=False, nullable=False)
-    economy_enabled = Column(Boolean, default=False, nullable=False)
-    leveling_enabled = Column(Boolean, default=False, nullable=False)
-    welcome_enabled = Column(Boolean, default=False, nullable=False)
-    automod_enabled = Column(Boolean, default=False, nullable=False)
-    backup_enabled = Column(Boolean, default=True, nullable=False)
-
-    # Relationships
-    security_settings = relationship("SecuritySettings", back_populates="guild", uselist=False, cascade="all, delete-orphan")
-    moderation_cases = relationship("ModerationCases", back_populates="guild", cascade="all, delete-orphan")
-    ticket_panels = relationship("TicketPanels", back_populates="guild", cascade="all, delete-orphan")
-    tickets = relationship("Tickets", back_populates="guild", cascade="all, delete-orphan")
-    economy_points = relationship("EconomyPoints", back_populates="guild", cascade="all, delete-orphan")
-    clans = relationship("ClanSystem", back_populates="guild", cascade="all, delete-orphan")
-    creator_programs = relationship("CreatorProgram", back_populates="guild", cascade="all, delete-orphan")
-    welcome_settings = relationship("WelcomeSettings", back_populates="guild", uselist=False, cascade="all, delete-orphan")
-    log_settings = relationship("LogSettings", back_populates="guild", uselist=False, cascade="all, delete-orphan")
-    audit_logs = relationship("DashboardAuditLogs", back_populates="guild", cascade="all, delete-orphan")
-    backups = relationship("Backups", back_populates="guild", cascade="all, delete-orphan")
-    scheduled_backups = relationship("ScheduledBackups", back_populates="guild", uselist=False, cascade="all, delete-orphan")
-    level_systems = relationship("LevelSystem", back_populates="guild", cascade="all, delete-orphan")
-    reaction_roles = relationship("ReactionRoles", back_populates="guild", cascade="all, delete-orphan")
-    auto_roles = relationship("AutoRoles", back_populates="guild", cascade="all, delete-orphan")
-    notifications = relationship("DashboardNotifications", back_populates="guild", cascade="all, delete-orphan")
-
-
-class SecuritySettings(Base, TimestampMixin):
-    __tablename__ = 'security_settings'
-
-    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
-    anti_spam = Column(Boolean, default=False, nullable=False)
-    anti_spam_limit = Column(Integer, default=5, nullable=False)
-    anti_duplicate_messages = Column(Boolean, default=False, nullable=False)
-    anti_caps = Column(Boolean, default=False, nullable=False)
-    anti_mass_mentions = Column(Boolean, default=False, nullable=False)
-    anti_links = Column(Boolean, default=False, nullable=False)
-    anti_invites = Column(Boolean, default=False, nullable=False)
-    anti_bots = Column(Boolean, default=False, nullable=False)
-    anti_webhooks = Column(Boolean, default=False, nullable=False)
-    anti_scam = Column(Boolean, default=True, nullable=False)
-    anti_phishing = Column(Boolean, default=True, nullable=False)
-    anti_raid = Column(Boolean, default=False, nullable=False)
-    anti_mass_join = Column(Boolean, default=False, nullable=False)
-    anti_bad_words = Column(Boolean, default=False, nullable=False)
-    verification_enabled = Column(Boolean, default=False, nullable=False)
-    punishment_type = Column(String(32), default="timeout", nullable=False)
-    automod_config = Column(Text, default="{}", nullable=False)
-    whitelist = Column(Text, default="[]", nullable=False)
+# تهيئة قاعدة البيانات
+engine = create_engine('sqlite:///obt_system.db')
+Base.metadata.create_all(engine)
     blacklist = Column(Text, default="[]", nullable=False)
 
     guild = relationship("GuildSettings", back_populates="security_settings")
