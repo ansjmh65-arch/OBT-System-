@@ -383,6 +383,355 @@ MASTER_DASHBOARD_TEMPLATE = """
             <div style="color: var(--success); font-weight: 700;"><i class="fa-solid fa-circle-check"></i> جميع الأقسام الـ 11 متصلة وتعمل بكفاءة تامة</div>
         </div>
         <div class="grid-stats">
+            <div class="stat-card"><span>الأنظمة الفعالة</span><h2    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    balance: Mapped[int] = mapped_column(BigInteger, default=0)         # (2) الاقتصاد
+    bank_balance: Mapped[int] = mapped_column(BigInteger, default=0)   # (2) البنك
+    points: Mapped[int] = mapped_column(BigInteger, default=0)         # (3) النقاط
+    xp: Mapped[int] = mapped_column(BigInteger, default=0)             # (9) المستويات والخبرة
+    level: Mapped[int] = mapped_column(Integer, default=1)             # (9) المستوى الحالي
+    clan_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("clans.id"), nullable=True) # (4) العشائر
+
+class ClanModel(Base):
+    __tablename__ = "clans"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True)        # (4) العشائر
+    owner_id: Mapped[int] = mapped_column(BigInteger)
+    level: Mapped[int] = mapped_column(Integer, default=1)
+    points: Mapped[int] = mapped_column(BigInteger, default=0)
+
+class WelcomeSettingsModel(Base):
+    __tablename__ = "welcome_settings"
+    
+    guild_id: Mapped[int] = mapped_column(BigInteger, primary_key=True) # (10) الترحيب والمغادرة
+    welcome_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    welcome_channel_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    welcome_message: Mapped[str] = mapped_column(Text, default="أهلاً بك {member_mention} في سيرفر {server_name}! أنت العضو رقم #{member_count}.")
+    use_embed: Mapped[bool] = mapped_column(Boolean, default=True)
+    embed_color: Mapped[str] = mapped_column(String(10), default="#6366f1")
+
+    goodbye_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    goodbye_channel_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    goodbye_message: Mapped[str] = mapped_column(Text, default="غادر العضو {member_name} السيرفر. نتمنى له التوفيق!")
+
+class AutoRoleModel(Base):
+    __tablename__ = "auto_roles"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    role_id: Mapped[int] = mapped_column(BigInteger)                    # (10) الرتب التلقائية
+    role_type: Mapped[str] = mapped_column(String(20), default="human")
+
+class CreatorApplicationModel(Base):
+    __tablename__ = "creator_applications"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    platform: Mapped[str] = mapped_column(String(50))                   # (11) برنامج صناع المحتوى
+    profile_url: Mapped[str] = mapped_column(String(500))
+    followers_count: Mapped[int] = mapped_column(Integer, default=0)
+    content_category: Mapped[str] = mapped_column(String(100))
+    status: Mapped[str] = mapped_column(String(20), default="PENDING")   # PENDING, APPROVED, REJECTED
+    creator_level: Mapped[int] = mapped_column(Integer, default=1)
+    total_rewards_claimed: Mapped[int] = mapped_column(BigInteger, default=0)
+    applied_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+class CentralLogModel(Base):
+    __tablename__ = "central_logs"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    category: Mapped[str] = mapped_column(String(50), index=True)       # (6) السجلات المركزية
+    action_type: Mapped[str] = mapped_column(String(100), index=True)
+    user_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    details: Mapped[str] = mapped_column(Text)
+    severity: Mapped[str] = mapped_column(String(20), default="INFO")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+Base.metadata.create_all(bind=engine)
+
+# --- دوال مساعدة مركزية ---
+def log_event(guild_id: int, category: str, action_type: str, details: str, user_id: int = 0, severity: str = "INFO"):
+    db = SessionLocal()
+    try:
+        new_log = CentralLogModel(
+            guild_id=guild_id, category=category, action_type=action_type,
+            user_id=user_id if user_id else None, details=details, severity=severity
+        )
+        db.add(new_log)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+    finally:
+        db.close()
+
+def format_welcome_message(template: str, member: discord.Member) -> str:
+    created_at_str = member.created_at.strftime('%Y-%m-%d')
+    return (
+        template
+        .replace("{member_name}", member.name)
+        .replace("{member_mention}", member.mention)
+        .replace("{server_name}", member.guild.name)
+        .replace("{member_count}", str(member.guild.member_count))
+        .replace("{account_created}", created_at_str)
+    )
+
+
+# --- 3. إعداد بوت ديسكورد وأحداث الأوامر ---
+intents = discord.Intents.default()
+intents.message_content = True
+intents.guilds = True
+intents.members = True
+
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+@bot.event
+async def on_ready():
+    print(f'✅ OBT System (الأنظمة الـ 11 كاملة) يعمل بنجاح كـ {bot.user}')
+    try:
+        synced = await bot.tree.sync()
+        print(f"🔄 تم مزامنة {len(synced)} أمر سلاش عربي بنجاح.")
+    except Exception as e:
+        print(f"خطأ في مزامنة الأوامر: {e}")
+
+# (10) أحداث الترحيب والمغادرة والرتب التلقائية
+@bot.event
+async def on_member_join(member: discord.Member):
+    db = SessionLocal()
+    try:
+        settings = db.query(WelcomeSettingsModel).filter_by(guild_id=member.guild.id).first()
+        auto_roles = db.query(AutoRoleModel).filter_by(guild_id=member.guild.id).all()
+        for ar in auto_roles:
+            role = member.guild.get_role(ar.role_id)
+            if role:
+                if ar.role_type == "bot" and not member.bot: continue
+                if ar.role_type == "human" and member.bot: continue
+                try:
+                    await member.add_roles(role, reason="OBT System - Auto Role")
+                except:
+                    pass
+
+        if settings and settings.welcome_enabled and settings.welcome_channel_id:
+            channel = member.guild.get_channel(settings.welcome_channel_id)
+            if channel:
+                formatted_text = format_welcome_message(settings.welcome_message, member)
+                if settings.use_embed:
+                    color_val = int(settings.embed_color.lstrip('#'), 16) if settings.embed_color.startswith('#') else 0x6366f1
+                    embed = discord.Embed(title="🎉 أهلاً بك في السيرفر!", description=formatted_text, color=color_val)
+                    embed.set_thumbnail(url=member.display_avatar.url)
+                    await channel.send(content=member.mention, embed=embed)
+                else:
+                    await channel.send(formatted_text)
+                log_event(member.guild.id, "Member", "Welcome Sent", f"ترحيب بالعضو {member}.", member.id)
+    finally:
+        db.close()
+
+@bot.event
+async def on_member_remove(member: discord.Member):
+    db = SessionLocal()
+    try:
+        settings = db.query(WelcomeSettingsModel).filter_by(guild_id=member.guild.id).first()
+        if settings and settings.goodbye_enabled and settings.goodbye_channel_id:
+            channel = member.guild.get_channel(settings.goodbye_channel_id)
+            if channel:
+                formatted_text = format_welcome_message(settings.goodbye_message, member)
+                await channel.send(formatted_text)
+                log_event(member.guild.id, "Member", "Goodbye Sent", f"مغادرة العضو {member}.", member.id)
+    finally:
+        db.close()
+
+# (9) نظام تتبع رسائل الأعضاء لمنح الخبرة والمستويات
+@bot.event
+async def on_message(message: discord.message.Message if hasattr(discord, 'message') else discord.Message):
+    if message.author.bot or not message.guild:
+        return
+    
+    db = SessionLocal()
+    try:
+        user_rec = db.query(UserModel).filter_by(guild_id=message.guild.id, user_id=message.author.id).first()
+        if not user_rec:
+            user_rec = UserModel(guild_id=message.guild.id, user_id=message.author.id, xp=0, level=1)
+            db.add(user_rec)
+        
+        # إضافة نقاط خبرة عشوائية لكل رسالة
+        earned_xp = random.randint(15, 25)
+        user_rec.xp += earned_xp
+        
+        # حساب ترقية المستوى (المستوى الحالي * 100)
+        required_xp = user_rec.level * 100
+        if user_rec.xp >= required_xp:
+            user_rec.level += 1
+            user_rec.xp = 0
+            log_event(message.guild.id, "Leveling", "Level Up", f"ترقى العضو {message.author} إلى المستوى {user_rec.level}.", message.author.id)
+            
+        db.commit()
+    except Exception as e:
+        db.rollback()
+    finally:
+        db.close()
+        
+    await bot.process_commands(message)
+
+# --- أوامر السلاش بالعربية الفصحى (تشمل الأقسام كاملة) ---
+@bot.tree.command(name="إعداد_الترحيب", description="تحديد قناة ورسالة الترحيب الخاصة بالسيرفر")
+@app_commands.describe(القناة="قناة ديسكورد المخصصة لإرسال الترحيب")
+async def slash_setup_welcome(interaction: discord.Interaction, القناة: discord.TextChannel):
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ عذراً، تتطلب صلاحية **مدير**.", ephemeral=True)
+        return
+    db = SessionLocal()
+    try:
+        settings = db.query(WelcomeSettingsModel).filter_by(guild_id=interaction.guild_id).first()
+        if not settings:
+            settings = WelcomeSettingsModel(guild_id=interaction.guild_id)
+            db.add(settings)
+        settings.welcome_channel_id = القناة.id
+        settings.welcome_enabled = True
+        db.commit()
+        await interaction.response.send_message(f"✅ **تم تحديث قناة الترحيب بنجاح!** القناة: {القناة.mention}")
+    finally:
+        db.close()
+
+@bot.tree.command(name="إعداد_المغادرة", description="تحديد قناة ورسالة مغادرة الأعضاء")
+@app_commands.describe(القناة="قناة ديسكورد المخصصة للمغادرة")
+async def slash_setup_goodbye(interaction: discord.Interaction, القناة: discord.TextChannel):
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ عذراً، تتطلب صلاحية **مدير**.", ephemeral=True)
+        return
+    db = SessionLocal()
+    try:
+        settings = db.query(WelcomeSettingsModel).filter_by(guild_id=interaction.guild_id).first()
+        if not settings:
+            settings = WelcomeSettingsModel(guild_id=interaction.guild_id)
+            db.add(settings)
+        settings.goodbye_channel_id = القناة.id
+        settings.goodbye_enabled = True
+        db.commit()
+        await interaction.response.send_message(f"✅ **تم تحديث قناة المغادرة بنجاح!** القناة: {القناة.mention}")
+    finally:
+        db.close()
+
+@bot.tree.command(name="تقديم_صانع_محتوى", description="التقديم للانضمام إلى برنامج صناع المحتوى المعتمد")
+@app_commands.describe(المنصة="المنصة الأساسية لصناعة المحتوى", رابط_الملف="رابط حسابك الشخصي", المتابعون="عدد المتابعين التقريبي", التصنيف="تصنيف المحتوى")
+@app_commands.choices(المنصة=[
+    app_commands.Choice(name="YouTube", value="YouTube"),
+    app_commands.Choice(name="TikTok", value="TikTok"),
+    app_commands.Choice(name="Twitch", value="Twitch"),
+    app_commands.Choice(name="Kick", value="Kick")
+])
+async def slash_apply_creator(interaction: discord.Interaction, المنصة: str, رابط_الملف: str, المتابعون: int, التصنيف: str):
+    db = SessionLocal()
+    try:
+        new_app = CreatorApplicationModel(
+            guild_id=interaction.guild_id, user_id=interaction.user.id,
+            platform=المنصة, profile_url=رابط_الملف, followers_count=المتابعون,
+            content_category=التصنيف, status="PENDING"
+        )
+        db.add(new_app)
+        db.commit()
+        await interaction.response.send_message("✅ **تم إرسال طلبك بنجاح!** سيتم مراجعته من الإدارة قريباً.", ephemeral=True)
+    finally:
+        db.close()
+
+@bot.tree.command(name="قبول_صانع_محتوى", description="قبول طلب انضمام صانع محتوى (خاص بالإدارة)")
+@app_commands.describe(العضو="العضو المراد قبول طلبه")
+async def slash_approve_creator(interaction: discord.Interaction, العضو: discord.Member):
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ عذراً، تتطلب صلاحية **مدير**.", ephemeral=True)
+        return
+    db = SessionLocal()
+    try:
+        app_record = db.query(CreatorApplicationModel).filter_by(guild_id=interaction.guild_id, user_id=العضو.id).first()
+        if not app_record:
+            await interaction.response.send_message("📂 لا توجد طلبات تقديم مسجلة لهذا العضو.", ephemeral=True)
+            return
+        app_record.status = "APPROVED"
+        db.commit()
+        await interaction.response.send_message(f"✅ **تمت الموافقة بنجاح!** اعتماد العضو {العضو.mention} رسمياً.")
+    finally:
+        db.close()
+
+@bot.tree.command(name="لوحة_صناع_المحتوى", description="عرض قائمة صناع المحتوى المعتمدين")
+async def slash_creators_leaderboard(interaction: discord.Interaction):
+    db = SessionLocal()
+    try:
+        approved = db.query(CreatorApplicationModel).filter_by(guild_id=interaction.guild_id, status="APPROVED").all()
+        if not approved:
+            await interaction.response.send_message("📊 لا يوجد صناع محتوى معتمدون حالياً.", ephemeral=True)
+            return
+        embed = discord.Embed(title="⭐ صناع المحتوى المعتمدون", color=0x6366f1)
+        desc_text = "".join([f"• <@{c.user_id}> — المنصة: `{c.platform}` | متابعون: `{c.followers_count:,}`\n" for c in approved])
+        embed.description = desc_text
+        await interaction.response.send_message(embed=embed)
+    finally:
+        db.close()
+
+
+# --- 4. لوحة تحكم Flask المؤسسية الشاملة (جميع الأقسام) ---
+MASTER_DASHBOARD_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBT System - لوحة التحكم المؤسسية (11 قسم متكامل)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-main: #0b0f19; --bg-card: #131b2e; --bg-sidebar: #090d16;
+            --accent: #6366f1; --accent-hover: #4f46e5; --text-main: #f8fafc;
+            --text-muted: #94a3b8; --border: #1e293b; --success: #22c55e;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+        body { background: var(--bg-main); color: var(--text-main); display: flex; min-height: 100vh; }
+        .sidebar { width: 280px; background: var(--bg-sidebar); border-left: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; height: 100vh; overflow-y: auto; }
+        .sidebar-brand { padding: 25px 20px; font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); background: rgba(99, 102, 241, 0.05); }
+        .sidebar-brand i { color: var(--accent); font-size: 24px; }
+        .sidebar-menu { padding: 20px 10px; }
+        .menu-category { font-size: 11px; text-transform: uppercase; color: var(--text-muted); padding: 10px 15px; font-weight: 700; }
+        .sidebar-menu a { display: flex; align-items: center; gap: 12px; padding: 12px 15px; color: var(--text-muted); text-decoration: none; border-radius: 10px; margin-bottom: 5px; font-size: 14px; font-weight: 600; transition: 0.2s; }
+        .sidebar-menu a:hover, .sidebar-menu a.active { background: var(--accent); color: white; }
+        .main-container { flex: 1; margin-right: 280px; padding: 40px; display: flex; flex-direction: column; gap: 30px; }
+        .topbar { display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 20px 30px; border-radius: 16px; border: 1px solid var(--border); }
+        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .stat-card { background: var(--bg-card); padding: 25px; border-radius: 16px; border: 1px solid var(--border); position: relative; }
+        .stat-card span { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+        .stat-card h2 { font-size: 26px; font-weight: 800; color: var(--text-main); margin-top: 8px; }
+        .card { background: var(--bg-card); padding: 30px; border-radius: 16px; border: 1px solid var(--border); }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-brand">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>OBT System</span>
+        </div>
+        <div class="sidebar-menu">
+            <div class="menu-category">الأنظمة الإدارية الـ 11</div>
+            <a href="/dashboard/123" class="active"><i class="fa-solid fa-chart-pie"></i><span>لوحة القيادة الرئيسية</span></a>
+            <a href="/dashboard/123"><i class="fa-solid fa-coins"></i><span>نظام الاقتصاد والبنك</span></a>
+            <a href="/dashboard/123"><i class="fa-solid fa-star"></i><span>نظام النقاط والمكافآت</span></a>
+            <a href="/dashboard/123"><i class="fa-solid fa-users-rectangle"></i><span>نظام العشائر والمجموعات</span></a>
+            <a href="/dashboard/123"><i class="fa-solid fa-lock"></i><span>الصلاحيات والأمان</span></a>
+            <a href="/dashboard/123"><i class="fa-solid fa-server"></i><span>السجلات المركزية (Logs)</span></a>
+            <a href="/dashboard/123"><i class="fa-solid fa-bell"></i><span>الإشعارات الفورية</span></a>
+            <a href="/dashboard/123"><i class="fa-solid fa-headset"></i><span>الدعم الفني والتذاكر</span></a>
+            <a href="/dashboard/123"><i class="fa-solid fa-ranking-star"></i><span>المستويات والخبرة (XP)</span></a>
+            <a href="/dashboard/123"><i class="fa-solid fa-door-open"></i><span>الترحيب والرتب التلقائية</span></a>
+            <a href="/dashboard/123"><i class="fa-solid fa-video"></i><span>برنامج صناع المحتوى</span></a>
+        </div>
+    </div>
+    <div class="main-container">
+        <div class="topbar">
+            <h1>لوحة التحكم المؤسسية الشاملة - OBT System</h1>
+            <div style="color: var(--success); font-weight: 700;"><i class="fa-solid fa-circle-check"></i> جميع الأقسام الـ 11 متصلة وتعمل بكفاءة تامة</div>
+        </div>
+        <div class="grid-stats">
             <div class="stat-card"><span>الأنظمة الفعالة</span><h2    prefix: Mapped[str] = mapped_column(String(10), default="!")
     security_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     
