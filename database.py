@@ -319,6 +319,138 @@ class DashboardNotifications(Base, TimestampMixin):
     read = Column(Boolean, default=False, nullable=False)
 
     guild = relationship("GuildSettings", back_populates="notifications")
+mestampMixin):
+    __tablename__ = 'welcome_settings'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    welcome_channel = Column(String(32), nullable=True)
+    goodbye_channel = Column(String(32), nullable=True)
+    auto_role = Column(String(32), nullable=True)
+    welcome_embed = Column(Text, default="{}", nullable=False)
+    goodbye_embed = Column(Text, default="{}", nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="welcome_settings")
+
+
+class LogSettings(Base, TimestampMixin):
+    __tablename__ = 'log_settings'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    member_logs = Column(String(32), nullable=True)
+    message_logs = Column(String(32), nullable=True)
+    voice_logs = Column(String(32), nullable=True)
+    moderation_logs = Column(String(32), nullable=True)
+    role_logs = Column(String(32), nullable=True)
+    channel_logs = Column(String(32), nullable=True)
+    emoji_logs = Column(String(32), nullable=True)
+    sticker_logs = Column(String(32), nullable=True)
+    invite_logs = Column(String(32), nullable=True)
+    webhook_logs = Column(String(32), nullable=True)
+    server_logs = Column(String(32), nullable=True)
+    ticket_logs = Column(String(32), nullable=True)
+    security_logs = Column(String(32), nullable=True)
+    points_logs = Column(String(32), nullable=True)
+    clan_logs = Column(String(32), nullable=True)
+    creator_logs = Column(String(32), nullable=True)
+    backup_logs = Column(String(32), nullable=True)
+    dashboard_logs = Column(String(32), nullable=True)
+    command_logs = Column(String(32), nullable=True)
+    error_logs = Column(String(32), nullable=True)
+
+    guild = relationship("GuildSettings", back_populates="log_settings")
+
+
+class DashboardAuditLogs(Base):
+    __tablename__ = 'dashboard_audit_logs'
+
+    log_id = Column(Integer, primary_key=True, autoincrement=True)
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), nullable=False, index=True)
+    admin_id = Column(String(32), nullable=False)
+    action_type = Column(String(64), nullable=False)
+    page = Column(String(64), nullable=False)
+    old_value = Column(Text, nullable=True)
+    new_value = Column(Text, nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+
+    guild = relationship("GuildSettings", back_populates="audit_logs")
+
+
+class Backups(Base, TimestampMixin):
+    __tablename__ = 'backups'
+
+    backup_id = Column(String(64), primary_key=True)
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), nullable=False, index=True)
+    name = Column(String(64), nullable=False)
+    description = Column(Text, nullable=True)
+    file_name = Column(String(255), nullable=False)
+    file_path = Column(String(512), nullable=False)
+    file_size = Column(Integer, nullable=False)
+    created_by = Column(String(32), nullable=False)
+    automatic_backup = Column(Boolean, default=False, nullable=False)
+    version = Column(String(16), default="1.0", nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="backups")
+
+
+class ScheduledBackups(Base, TimestampMixin):
+    __tablename__ = 'scheduled_backups'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    enabled = Column(Boolean, default=False, nullable=False)
+    interval = Column(String(32), default="daily", nullable=False)
+    last_backup = Column(DateTime, nullable=True)
+    next_backup = Column(DateTime, nullable=True)
+    keep_last_backups = Column(Integer, default=5, nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="scheduled_backups")
+
+
+class LevelSystem(Base, TimestampMixin):
+    __tablename__ = 'level_system'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    user_id = Column(String(32), primary_key=True, index=True)
+    xp = Column(Integer, default=0, nullable=False)
+    level = Column(Integer, default=0, nullable=False)
+    total_messages = Column(Integer, default=0, nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="level_systems")
+
+
+class ReactionRoles(Base):
+    __tablename__ = 'reaction_roles'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    message_id = Column(String(32), primary_key=True, index=True)
+    emoji = Column(String(64), primary_key=True)
+    role_id = Column(String(32), nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="reaction_roles")
+
+
+class AutoRoles(Base):
+    __tablename__ = 'auto_roles'
+
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), primary_key=True)
+    role_id = Column(String(32), primary_key=True)
+    bot_role = Column(Boolean, default=False, nullable=False)
+    human_role = Column(Boolean, default=True, nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="auto_roles")
+
+
+class DashboardNotifications(Base, TimestampMixin):
+    __tablename__ = 'dashboard_notifications'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    guild_id = Column(String(32), ForeignKey('guild_settings.guild_id', ondelete='CASCADE'), nullable=False, index=True)
+    title = Column(String(128), nullable=False)
+    message = Column(Text, nullable=False)
+    type = Column(String(32), default="info", nullable=False)
+    read = Column(Boolean, default=False, nullable=False)
+
+    guild = relationship("GuildSettings", back_populates="notifications")
     anti_bots = Column(Boolean, default=False, nullable=False)
     anti_webhooks = Column(Boolean, default=False, nullable=False)
     anti_scam = Column(Boolean, default=True, nullable=False)
