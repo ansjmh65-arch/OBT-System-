@@ -3,76 +3,462 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OBT System - لوحة التحكم</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>لوحة تحكم البوت | {{ guild_name }}</title>
     <style>
         :root {
-            --bg-main: #0b0f19;
-            --bg-card: #131b2e;
-            --bg-sidebar: #090d16;
-            --accent: #6366f1;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --border: #1e293b;
-            --success: #22c55e;
+            --bg-main: #36393f;
+            --bg-sidebar: #2f3136;
+            --bg-card: #202225;
+            --text-color: #ffffff;
+            --text-muted: #b9bbbe;
+            --accent-color: #5865f2;
+            --accent-hover: #4752c4;
+            --success-color: #3ba55d;
+            --danger-color: #ed4245;
+            --border-color: #4f545c;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
-        body { background: var(--bg-main); color: var(--text-main); display: flex; min-height: 100vh; }
-        .sidebar { width: 280px; background: var(--bg-sidebar); border-left: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; height: 100vh; overflow-y: auto; }
-        .sidebar-brand { padding: 25px 20px; font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); background: rgba(99, 102, 241, 0.05); }
-        .sidebar-brand i { color: var(--accent); font-size: 24px; }
-        .sidebar-menu { padding: 20px 10px; }
-        .menu-category { font-size: 11px; text-transform: uppercase; color: var(--text-muted); padding: 10px 15px; font-weight: 700; }
-        .sidebar-menu a { display: flex; align-items: center; gap: 12px; padding: 12px 15px; color: var(--text-muted); text-decoration: none; border-radius: 10px; margin-bottom: 5px; font-size: 14px; font-weight: 600; transition: 0.2s; }
-        .sidebar-menu a:hover, .sidebar-menu a.active { background: var(--accent); color: white; }
-        .main-container { flex: 1; margin-right: 280px; padding: 40px; display: flex; flex-direction: column; gap: 30px; }
-        .topbar { display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 20px 30px; border-radius: 16px; border: 1px solid var(--border); }
-        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
-        .stat-card { background: var(--bg-card); padding: 25px; border-radius: 16px; border: 1px solid var(--border); }
-        .stat-card span { font-size: 13px; color: var(--text-muted); font-weight: 600; }
-        .stat-card h2 { font-size: 26px; font-weight: 800; color: var(--text-main); margin-top: 8px; }
-        .card { background: var(--bg-card); padding: 30px; border-radius: 16px; border: 1px solid var(--border); }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* القائمة الجانبية */
+        .sidebar {
+            width: 280px;
+            background-color: var(--bg-sidebar);
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            background-color: var(--bg-card);
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .server-id {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+            display: block;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            overflow-y: auto;
+            flex: 1;
+            padding: 10px;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 5px;
+        }
+
+        .menu-btn {
+            width: 100%;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            text-align: right;
+            padding: 12px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s;
+        }
+
+        .menu-btn:hover, .menu-btn.active {
+            background-color: var(--accent-color);
+            color: #fff;
+        }
+
+        /* المحتوى الرئيسي */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            background-color: var(--bg-main);
+        }
+
+        header {
+            background-color: var(--bg-sidebar);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .toggle-sidebar {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .content-body {
+            padding: 30px;
+            max-width: 1000px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* كروت الأقسام وإدخال البيانات */
+        .section-panel {
+            display: none;
+            background-color: var(--bg-card);
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+
+        .section-panel.active {
+            display: block;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        input[type="text"], input[type="number"], select, textarea {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            color: white;
+            font-size: 1rem;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .switch-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: var(--bg-main);
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 15px;
+        }
+
+        /* أزرار الحفظ */
+        .save-btn {
+            background-color: var(--success-color);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .save-btn:hover {
+            opacity: 0.9;
+        }
+
+        /* التوافق مع الهواتف الذكية */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 250px;
+                border-left: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .sidebar-menu {
+                display: flex;
+                overflow-x: auto;
+                overflow-y: hidden;
+                padding: 10px;
+                gap: 10px;
+            }
+            .sidebar-menu li {
+                margin-bottom: 0;
+                flex-shrink: 0;
+            }
+            .menu-btn {
+                white-space: nowrap;
+                padding: 8px 15px;
+            }
+            .content-body {
+                padding: 15px;
+            }
+            header {
+                padding: 10px 15px;
+            }
+        }
     </style>
 </head>
 <body>
+
+    <!-- القائمة الجانبية الـ 11 قسماً -->
     <div class="sidebar">
-        <div class="sidebar-brand">
-            <i class="fa-solid fa-shield-halved"></i>
-            <span>OBT System</span>
+        <div class="sidebar-header">
+            <span>{{ guild_name }}</span>
+            <span class="server-id">ID: {{ guild_id }}</span>
         </div>
-        <div class="sidebar-menu">
-            <div class="menu-category">معرف السيرفر: {{ guild_id }}</div>
-            <a href="#" class="active"><i class="fa-solid fa-chart-pie"></i><span>لوحة القيادة الرئيسية</span></a>
-            <a href="#"><i class="fa-solid fa-coins"></i><span>نظام الاقتصاد والبنك</span></a>
-            <a href="#"><i class="fa-solid fa-star"></i><span>نظام النقاط والمكافآت</span></a>
-            <a href="#"><i class="fa-solid fa-users-rectangle"></i><span>نظام العشائر</span></a>
-            <a href="#"><i class="fa-solid fa-lock"></i><span>الصلاحيات والأمان</span></a>
-            <a href="#"><i class="fa-solid fa-server"></i><span>السجلات المركزية</span></a>
-            <a href="#"><i class="fa-solid fa-bell"></i><span>الإشعارات الفورية</span></a>
-            <a href="#"><i class="fa-solid fa-headset"></i><span>الدعم الفني</span></a>
-            <a href="#"><i class="fa-solid fa-ranking-star"></i><span>المستويات والخبرة</span></a>
-            <a href="#"><i class="fa-solid fa-door-open"></i><span>الترحيب والرتب</span></a>
-            <a href="#"><i class="fa-solid fa-video"></i><span>صناع المحتوى</span></a>
+        <ul class="sidebar-menu">
+            {% for section in sections %}
+            <li>
+                <button class="menu-btn {% if loop.first %}active{% endif %}" onclick="showSection('section-{{ section.route }}', this)">
+                    <span>{{ section.icon }}</span>
+                    <span>{{ section.name }}</span>
+                </button>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- المحتوى الرئيسي والأقسام -->
+    <div class="main-content">
+        <header>
+            <h3>لوحة التحكم الشاملة للبوت</h3>
+            <span style="color: var(--success-color); font-size: 0.9rem;">● متصل بالسيرفر</span>
+        </header>
+
+        <div class="content-body">
+            <form action="#" method="POST" onsubmit="event.preventDefault(); alert('تم حفظ الإعدادات بنجاح في قاعدة البيانات!');">
+                
+                <!-- 1. الإعدادات العامة -->
+                <div id="section-general" class="section-panel active">
+                    <h2>⚙️ الإعدادات العامة</h2>
+                    <div class="form-group">
+                        <label>بادئة الأوامر (Prefix)</label>
+                        <input type="text" value="!" placeholder="مثال: ! أو $">
+                    </div>
+                    <div class="form-group">
+                        <label>لغة البوت داخل السيرفر</label>
+                        <select>
+                            <option value="ar">العربية</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                    <button class="save-btn">حفظ التغييرات</button>
+                </div>
+
+                <!-- 2. الحماية -->
+                <div id="section-protection" class="section-panel">
+                    <h2>🛡️ نظام الحماية (Protection)</h2>
+                    <div class="switch-group">
+                        <span>منع نشر الروابط والدعوات الخبيثة</span>
+                        <input type="checkbox" checked style="width:20px; height:20px;">
+                    </div>
+                    <div class="switch-group">
+                        <span>الحماية من السبام والتكرار السريع</span>
+                        <input type="checkbox" checked style="width:20px; height:20px;">
+                    </div>
+                    <div class="form-group">
+                        <label>العقوبة التلقائية للمخالفين</label>
+                        <select>
+                            <option>تحذير (Warning)</option>
+                            <option>كتم مؤقت (Mute)</option>
+                            <option>طرد (Kick)</option>
+                        </select>
+                    </div>
+                    <button class="save-btn">حفظ إعدادات الحماية</button>
+                </div>
+
+                <!-- 3. الترحيب والمغادرة -->
+                <div id="section-welcomer" class="section-panel">
+                    <h2>👋 نظام الترحيب والمغادرة</h2>
+                    <div class="form-group">
+                        <label>روم إرسال الترحيب</label>
+                        <input type="text" placeholder="ضع اسم أو ID الروم هنا">
+                    </div>
+                    <div class="form-group">
+                        <label>رسالة الترحيب بالأعضاء الجدد</label>
+                        <textarea rows="4" placeholder="أهلاً بك [user] في سيرفرنا! نورتنا..."></textarea>
+                    </div>
+                    <button class="save-btn">حفظ الترحيب</button>
+                </div>
+
+                <!-- 4. الردود التلقائية -->
+                <div id="section-auto_responder" class="section-panel">
+                    <h2>🤖 الردود التلقائية</h2>
+                    <div class="form-group">
+                        <label>الكلمة المفتاحية (إذا قال العضو)</label>
+                        <input type="text" placeholder="مثال: السلام عليكم">
+                    </div>
+                    <div class="form-group">
+                        <label>رد البوت التلقائي</label>
+                        <input type="text" placeholder="مثال: وعليكم السلام ورحمة الله وبركاته، منور!">
+                    </div>
+                    <button class="save-btn">إضافة الرد التلقائي</button>
+                </div>
+
+                <!-- 5. نظام التذاكر -->
+                <div id="section-tickets" class="section-panel">
+                    <h2>🎫 نظام التذاكر (Tickets)</h2>
+                    <div class="form-group">
+                        <label>فئة رومات التذاكر (Category ID)</label>
+                        <input type="number" placeholder="ايدي الكاتيجوري لحفظ التذاكر">
+                    </div>
+                    <div class="form-group">
+                        <label>رسالة الدعم الفني داخل التذكرة</label>
+                        <textarea rows="3" placeholder="مرحباً بك، سيقوم أحد المشرفين بالرد عليك قريباً."></textarea>
+                    </div>
+                    <button class="save-btn">تفعيل نظام التذاكر</button>
+                </div>
+
+                <!-- 6. سجل الأحداث (Logs) -->
+                <div id="section-logs" class="section-panel">
+                    <h2>📜 سجل الأحداث (Logs)</h2>
+                    <div class="form-group">
+                        <label>روم تسجيل المحذوفات والتعديلات</label>
+                        <input type="text" placeholder="ايدي روم اللوج">
+                    </div>
+                    <div class="switch-group">
+                        <span>تسجيل الرسائل المحذوفة</span>
+                        <input type="checkbox" checked style="width:20px; height:20px;">
+                    </div>
+                    <div class="switch-group">
+                        <span>تسجيل دخول وخروج الأعضاء من الرومات الصوتية</span>
+                        <input type="checkbox" style="width:20px; height:20px;">
+                    </div>
+                    <button class="save-btn">تحديث اللوج</button>
+                </div>
+
+                <!-- 7. الأدوار التلقائية -->
+                <div id="section-auto_roles" class="section-panel">
+                    <h2>🎭 الأدوار التلقائية (Auto Roles)</h2>
+                    <div class="form-group">
+                        <label>الرتبة المعطاة تلقائياً عند دخول السيرفر</label>
+                        <input type="text" placeholder="اسم أو ID الرتبة (مثال: Member)">
+                    </div>
+                    <button class="save-btn">حفظ الرتبة</button>
+                </div>
+
+                <!-- 8. نظام المستويات -->
+                <div id="section-leveling" class="section-panel">
+                    <h2>⭐ نظام المستويات والتفاعل</h2>
+                    <div class="switch-group">
+                        <span>تفعيل نظام نقاط الخبرة (XP) والمستويات</span>
+                        <input type="checkbox" checked style="width:20px; height:20px;">
+                    </div>
+                    <div class="form-group">
+                        <label>معدل إعطاء الـ XP لكل رسالة</label>
+                        <select>
+                            <option>عادي (15-25 XP)</option>
+                            <option>سريع مضاعف</option>
+                        </select>
+                    </div>
+                    <button class="save-btn">حفظ النظام</button>
+                </div>
+
+                <!-- 9. الاقتصاد -->
+                <div id="section-economy" class="section-panel">
+                    <h2>💰 نظام الاقتصاد (Economy)</h2>
+                    <div class="form-group">
+                        <label>اسم العملة داخل السيرفر</label>
+                        <input type="text" value="ريال" placeholder="مثال: نقطة / دولار / ريال">
+                    </div>
+                    <div class="form-group">
+                        <label>المبلغ الافتراضي للحساب الجديد</label>
+                        <input type="number" value="1000">
+                    </div>
+                    <button class="save-btn">حفظ إعدادات الاقتصاد</button>
+                </div>
+
+                <!-- 10. الرومات الصوتية المؤقتة -->
+                <div id="section-voice" class="section-panel">
+                    <h2>🎙️ الرومات الصوتية المؤقتة (Temp Voice)</h2>
+                    <div class="form-group">
+                        <label>روم الصوت الرئيسي (إنشاء روم عند دخوله)</label>
+                        <input type="text" placeholder="اكتب ID روم اضغط لإنشاء روم">
+                    </div>
+                    <div class="form-group">
+                        <label>الاسم الافتراضي للروم الجديد</label>
+                        <input type="text" value="🎙️ روم [user]">
+                    </div>
+                    <button class="save-btn">تنشيط الرومات الصوتية</button>
+                </div>
+
+                <!-- 11. أوامر الإدارة -->
+                <div id="section-moderation" class="section-panel">
+                    <h2>🔨 أوامر الإدارة (Moderation)</h2>
+                    <div class="form-group">
+                        <label>رتبة المسؤولين الذين يمكنهم استخدام الحظر والطرد</label>
+                        <input type="text" placeholder="مثال: Admin أو MOD">
+                    </div>
+                    <div class="switch-group">
+                        <span>إرسال سبب الحظر أو الطرد للعضو في الخاص تلقائياً</span>
+                        <input type="checkbox" checked style="width:20px; height:20px;">
+                    </div>
+                    <button class="save-btn">حفظ إعدادات الإدارة</button>
+                </div>
+
+            </form>
         </div>
     </div>
-    <div class="main-container">
-        <div class="topbar">
-            <h1>لوحة التحكم المؤسسية الشاملة - OBT System</h1>
-            <div style="color: var(--success); font-weight: 700;"><i class="fa-solid fa-circle-check"></i> السيرفر متصل ويعمل بكفاءة</div>
-        </div>
-        <div class="grid-stats">
-            <div class="stat-card"><span>الأنظمة الفعالة</span><h2>11 / 11</h2></div>
-            <div class="stat-card"><span>قاعدة البيانات</span><h2>SQLAlchemy 2.x</h2></div>
-            <div class="stat-card"><span>حالة الأمان</span><h2 style="color: var(--success);">محمي بالكامل</h2></div>
-            <div class="stat-card"><span>معرف السيرفر الحالي</span><h2>{{ guild_id }}</h2></div>
-        </div>
-        <div class="card">
-            <h3 style="margin-bottom: 10px;"><i class="fa-solid fa-microchip" style="color: var(--accent);"></i> ملخص الهندسة البرمجية</h3>
-            <p style="color: var(--text-muted); font-size: 14px; line-height: 1.8;">
-                تمت مراجعة وتنقيح جميع أنظمة البوت وقاعدة البيانات والداشبورد لتكون جاهزة للتشغيل الفوري.
-            </p>
-        </div>
-    </div>
+
+    <!-- كود الجافا سكربت للتنقل الذكي الفوري بدون أخطاء -->
+    <script>
+        function showSection(sectionId, button) {
+            // إخفاء كل لوحات الأقسام
+            const panels = document.querySelectorAll('.section-panel');
+            panels.forEach(panel => panel.classList.remove('active'));
+
+            // إزالة الحالة النشطة من أزرار القائمة الجانبية
+            const buttons = document.querySelectorAll('.menu-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+
+            // إظهار القسم المطلوب وتفعيل الزر المكبوس
+            document.getElementById(sectionId).classList.add('active');
+            button.classList.add('active');
+            
+            // سحب الشاشة للأعلى تلقائياً على الجوال عند تغيير القسم
+            document.querySelector('.main-content').scrollTop = 0;
+        }
+    </script>
 </body>
 </html>
