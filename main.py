@@ -16,4 +16,4 @@ async def on_ready():
     print('Bot is ready and online!')
 
 # هنا ستضع أوامرك البرمجية لاحقاً باللغة الإنجليزية
-# bot.run('ضع_التوكن_هنا')
+# bot.run('')
