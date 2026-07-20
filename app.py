@@ -113,4 +113,10 @@ if __name__ == '__main__':
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
     app.run(host='0.0.0.0', port=5000, debug=app.config['DEBUG'])
-    
+    from flask import render_template
+
+@app.route('/dashboard')
+def dashboard():
+    # يمكنك تمرير اسم السيرفر والأيدي الحقيقيين هنا لاحقاً
+    return render_template('dashboard.html', guild_name="OBT System", guild_id="123456789")
+                                  
