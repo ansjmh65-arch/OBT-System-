@@ -1,5 +1,4 @@
-discord.py
-aiohttp
-aiosqlite
-sqlalchemy
 flask
+discord.py
+sqlalchemy
+psycopg2-binary
