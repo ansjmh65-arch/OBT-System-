@@ -1,345 +1,45 @@
-"""
-OBT Dashboard — لوحة التحكم الويب
-Flask + Discord OAuth2
-"""
-
-import os
-import sys
-import sqlite3
-import json
-import requests
-from functools import wraps
-from datetime import datetime
-from flask import (Flask, render_template, redirect, url_for, request,
-                   session, jsonify, flash, g)
-
-# ── App setup ──────────────────────────────────────────────────────────────────
+from flask import Flask, render_template, redirect, url_for, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from database import Base, GuildSettings, Ticket, ModerationCase, Clan, EconomyPoint
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SESSION_SECRET', os.urandom(24))
-app.config['SESSION_COOKIE_SECURE'] = False
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
-# ── Config ─────────────────────────────────────────────────────────────────────
+# إعداد قاعدة البيانات باستخدام ملف SQLite الموجود في المشروع
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///obt_system.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-DISCORD_CLIENT_ID = os.getenv('DISCORD_CLIENT_ID', '')
-DISCORD_CLIENT_SECRET = os.getenv('DISCORD_CLIENT_SECRET', '')
-BOT_TOKEN = os.getenv('DISCORD_TOKEN', '')
+# ربط SQLAlchemy بقاعدة البيانات ونماذج جداول البوت
+db = SQLAlchemy(model_class=Base)
+db.init_app(app)
 
-# Database path — same SQLite DB as the bot
-DB_PATH = os.getenv('DB_PATH', os.path.join(
-    os.path.dirname(__file__), '..', 'obt-system', 'obt_system.db'
-))
-
-DISCORD_API = 'https://discord.com/api/v10'
-OAUTH_SCOPES = 'identify guilds'
-
-# Redirect URI — auto-detect from Replit env or use env var
-def get_redirect_uri():
-    base = os.getenv('DASHBOARD_URL', '')
-    if not base:
-        dev_domain = os.getenv('REPLIT_DEV_DOMAIN', '')
-        if dev_domain:
-            base = f'https://{dev_domain}'
-        else:
-            base = 'http://localhost:5000'
-    return base.rstrip('/') + '/callback'
-
-# ── Database ───────────────────────────────────────────────────────────────────
-
-def get_db():
-    if 'db' not in g:
-        g.db = sqlite3.connect(DB_PATH)
-        g.db.row_factory = sqlite3.Row
-    return g.db
-
-@app.teardown_appcontext
-def close_db(e=None):
-    db = g.pop('db', None)
-    if db:
-        db.close()
-
-def query_db(query, args=(), one=False, commit=False):
-    db = get_db()
-    cur = db.execute(query, args)
-    if commit:
-        db.commit()
-        return cur.lastrowid
-    rv = cur.fetchall()
-    return (rv[0] if rv else None) if one else rv
-
-def ensure_guild(guild_id: int):
-    existing = query_db("SELECT guild_id FROM guilds WHERE guild_id = ?", (guild_id,), one=True)
-    if not existing:
-        query_db("INSERT INTO guilds (guild_id) VALUES (?)", (guild_id,), commit=True)
-
-# ── Discord API helpers ────────────────────────────────────────────────────────
-
-def discord_get(endpoint: str, token: str):
-    headers = {'Authorization': f'Bearer {token}'}
-    r = requests.get(f'{DISCORD_API}{endpoint}', headers=headers, timeout=10)
-    if r.status_code == 200:
-        return r.json()
-    return None
-
-def bot_get(endpoint: str):
-    headers = {'Authorization': f'Bot {BOT_TOKEN}'}
-    r = requests.get(f'{DISCORD_API}{endpoint}', headers=headers, timeout=10)
-    if r.status_code == 200:
-        return r.json()
-    return None
-
-def get_bot_guilds():
-    """Get list of guilds the bot is in."""
-    if not BOT_TOKEN:
-        return []
-    data = bot_get('/users/@me/guilds')
-    return {str(g['id']): g for g in (data or [])}
-
-def requires_login(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if 'user' not in session:
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated
-
-def requires_guild(f):
-    @wraps(f)
-    def decorated(guild_id, *args, **kwargs):
-        if 'user' not in session:
-            return redirect(url_for('login'))
-        # Check user has access to this guild
-        user_guilds = session.get('guilds', {})
-        if str(guild_id) not in user_guilds:
-            flash('ليس لديك وصول لهذا السيرفر.', 'error')
-            return redirect(url_for('servers'))
-        g.guild_id = int(guild_id)
-        g.guild_info = user_guilds[str(guild_id)]
-        return f(guild_id, *args, **kwargs)
-    return decorated
-
-# ── Auth routes ────────────────────────────────────────────────────────────────
-
-@app.route('/login')
-def login():
-    if 'user' in session:
-        return redirect(url_for('servers'))
-    return render_template('login.html')
-
-@app.route('/auth')
-def auth():
-    redirect_uri = get_redirect_uri()
-    url = (
-        f'https://discord.com/api/oauth2/authorize'
-        f'?client_id={DISCORD_CLIENT_ID}'
-        f'&redirect_uri={requests.utils.quote(redirect_uri)}'
-        f'&response_type=code'
-        f'&scope={requests.utils.quote(OAUTH_SCOPES)}'
-    )
-    return redirect(url)
-
-@app.route('/callback')
-def callback():
-    code = request.args.get('code')
-    if not code:
-        flash('فشل تسجيل الدخول.', 'error')
-        return redirect(url_for('login'))
-
-    redirect_uri = get_redirect_uri()
-
-    # Exchange code for token
-    r = requests.post(f'{DISCORD_API}/oauth2/token', data={
-        'client_id': DISCORD_CLIENT_ID,
-        'client_secret': DISCORD_CLIENT_SECRET,
-        'grant_type': 'authorization_code',
-        'code': code,
-        'redirect_uri': redirect_uri,
-    }, timeout=10)
-
-    if r.status_code != 200:
-        flash('فشل الحصول على التوكن.', 'error')
-        return redirect(url_for('login'))
-
-    token_data = r.json()
-    access_token = token_data.get('access_token')
-
-    # Get user info
-    user = discord_get('/users/@me', access_token)
-    if not user:
-        flash('فشل الحصول على معلومات المستخدم.', 'error')
-        return redirect(url_for('login'))
-
-    # Get user guilds
-    guilds_list = discord_get('/users/@me/guilds', access_token)
-    MANAGE_GUILD = 0x20
-
-    # Filter: user has Manage Server permission
-    admin_guilds = {
-        str(g['id']): g for g in (guilds_list or [])
-        if (int(g.get('permissions', 0)) & MANAGE_GUILD) or g.get('owner')
-    }
-
-    # Also filter: bot must be in the guild
-    bot_guilds = get_bot_guilds()
-    shared_guilds = {
-        gid: ginfo for gid, ginfo in admin_guilds.items()
-        if gid in bot_guilds
-    }
-
-    session['user'] = user
-    session['access_token'] = access_token
-    session['guilds'] = shared_guilds
-
-    return redirect(url_for('servers'))
-
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('login'))
-
-# ── Server selection ───────────────────────────────────────────────────────────
+# إنشاء الجداول تلقائياً في حال لم تكن موجودة
+with app.app_context():
+    db.create_all()
 
 @app.route('/')
-@requires_login
-def servers():
-    guilds = session.get('guilds', {})
-    return render_template('servers.html', guilds=guilds, user=session['user'])
+def index():
+    """عرض صفحة لوحة التحكم الرئيسية"""
+    return render_template('index.html')
 
-# ── Dashboard overview ─────────────────────────────────────────────────────────
+@app.route('/api/stats')
+def api_stats():
+    """مسار برمجي (API) لجلب إحصائيات البوت الحقيقية من قاعدة البيانات وعرضها في الداشبورد"""
+    try:
+        guilds_count = GuildSettings.query.count()
+        tickets_count = Ticket.query.filter_by(status='open').count()
+        clans_count = Clan.query.count()
+        
+        return jsonify({
+            "status": "success",
+            "guilds": guilds_count,
+            "active_tickets": tickets_count,
+            "clans": clans_count
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/dashboard/<int:guild_id>')
-@requires_login
-@requires_guild
-def dashboard(guild_id):
-    ensure_guild(guild_id)
-    guild_data = query_db("SELECT * FROM guilds WHERE guild_id = ?", (guild_id,), one=True)
-    
-    # Stats
-    member_count = len(query_db("SELECT DISTINCT user_id FROM points WHERE guild_id = ?", (guild_id,)))
-    total_tickets = query_db("SELECT COUNT(*) as c FROM tickets WHERE guild_id = ?", (guild_id,), one=True)
-    open_tickets = query_db("SELECT COUNT(*) as c FROM tickets WHERE guild_id = ? AND status = 'open'", (guild_id,), one=True)
-    total_warnings = query_db("SELECT COUNT(*) as c FROM warnings WHERE guild_id = ?", (guild_id,), one=True)
-    total_clans = query_db("SELECT COUNT(*) as c FROM clans WHERE guild_id = ?", (guild_id,), one=True)
-    recent_actions = query_db(
-        "SELECT * FROM action_logs WHERE guild_id = ? ORDER BY timestamp DESC LIMIT 8", (guild_id,))
-
-    stats = {
-        'members_with_points': member_count,
-        'total_tickets': total_tickets['c'] if total_tickets else 0,
-        'open_tickets': open_tickets['c'] if open_tickets else 0,
-        'total_warnings': total_warnings['c'] if total_warnings else 0,
-        'total_clans': total_clans['c'] if total_clans else 0,
-    }
-
-    return render_template('dashboard.html',
-        guild_id=guild_id,
-        guild_info=g.guild_info,
-        guild_data=guild_data,
-        stats=stats,
-        recent_actions=recent_actions,
-        user=session['user']
-    )
-
-# ── Administration & Protection ────────────────────────────────────────────────
-
-@app.route('/dashboard/<int:guild_id>/admin', methods=['GET', 'POST'])
-@requires_login
-@requires_guild
-def admin(guild_id):
-    ensure_guild(guild_id)
-    if request.method == 'POST':
-        data = request.form
-
-        # Guild settings
-        guild_kwargs = {}
-        if 'prefix' in data:
-            guild_kwargs['prefix'] = data['prefix'] or '!'
-        if 'log_channel' in data:
-            ch = data['log_channel']
-            guild_kwargs['log_channel'] = int(ch) if ch else None
-        if 'mute_role' in data:
-            r = data['mute_role']
-            guild_kwargs['mute_role'] = int(r) if r else None
-
-        if guild_kwargs:
-            sets = ', '.join(f"{k} = ?" for k in guild_kwargs)
-            vals = list(guild_kwargs.values()) + [guild_id]
-            query_db(f"UPDATE guilds SET {sets} WHERE guild_id = ?", vals, commit=True)
-
-        # Logs config — individual log channel fields
-        log_fields = ['ban_log', 'kick_log', 'delete_log', 'edit_log', 'channel_log',
-                      'role_log', 'member_log', 'name_log', 'mute_log', 'ticket_log',
-                      'command_log', 'invite_log']
-        log_kwargs = {}
-        for field in log_fields:
-            if field in data:
-                val = data[field]
-                log_kwargs[field] = int(val) if val else None
-
-        if log_kwargs:
-            existing_log = query_db("SELECT guild_id FROM logs_config WHERE guild_id = ?", (guild_id,), one=True)
-            if existing_log:
-                sets = ', '.join(f"{k} = ?" for k in log_kwargs)
-                vals = list(log_kwargs.values()) + [guild_id]
-                query_db(f"UPDATE logs_config SET {sets} WHERE guild_id = ?", vals, commit=True)
-            else:
-                log_kwargs['guild_id'] = guild_id
-                cols = ', '.join(log_kwargs.keys())
-                placeholders = ', '.join('?' for _ in log_kwargs)
-                query_db(f"INSERT INTO logs_config ({cols}) VALUES ({placeholders})",
-                         list(log_kwargs.values()), commit=True)
-
-        # Protection settings
-        prot_kwargs = {}
-        bool_fields = ['anti_spam', 'anti_links', 'anti_mention', 'anti_invites',
-                       'anti_bots', 'anti_channel_create', 'anti_role_create',
-                       'anti_channel_delete', 'anti_role_delete']
-        for field in bool_fields:
-            prot_kwargs[field] = 1 if field in data else 0
-
-        if 'spam_limit' in data and data['spam_limit']:
-            prot_kwargs['spam_limit'] = int(data['spam_limit'])
-        if 'mention_limit' in data and data['mention_limit']:
-            prot_kwargs['mention_limit'] = int(data['mention_limit'])
-        if 'warn_limit' in data and data['warn_limit']:
-            prot_kwargs['warn_limit'] = int(data['warn_limit'])
-        if 'warn_action' in data:
-            prot_kwargs['warn_action'] = data['warn_action']
-
-        # Upsert protection
-        existing = query_db("SELECT guild_id FROM protection_config WHERE guild_id = ?", (guild_id,), one=True)
-        if existing:
-            sets = ', '.join(f"{k} = ?" for k in prot_kwargs)
-            vals = list(prot_kwargs.values()) + [guild_id]
-            query_db(f"UPDATE protection_config SET {sets} WHERE guild_id = ?", vals, commit=True)
-        else:
-            prot_kwargs['guild_id'] = guild_id
-            cols = ', '.join(prot_kwargs.keys())
-            placeholders = ', '.join('?' for _ in prot_kwargs)
-            query_db(f"INSERT INTO protection_config ({cols}) VALUES ({placeholders})",
-                     list(prot_kwargs.values()), commit=True)
-
-        flash('✅ تم حفظ الإعدادات بنجاح!', 'success')
-        return redirect(url_for('admin', guild_id=guild_id))
-
-    guild_data = query_db("SELECT * FROM guilds WHERE guild_id = ?", (guild_id,), one=True)
-    protection = query_db("SELECT * FROM protection_config WHERE guild_id = ?", (guild_id,), one=True)
-
-    # Log config
-    log_config = query_db("SELECT * FROM logs_config WHERE guild_id = ?", (guild_id,), one=True)
-
-    # Recent warnings
-    warnings = query_db(
-        "SELECT * FROM warnings WHERE guild_id = ? ORDER BY timestamp DESC LIMIT 20", (guild_id,))
-
-    return render_template('admin.html',
-        guild_id=guild_id,
-        guild_info=g.guild_info,
-        guild_data=guild_data,
-        protection=protection,
-        log_config=log_config,
-        warnings=warnings,
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
         user=session['user']
     )
 
