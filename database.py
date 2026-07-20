@@ -2440,3 +2440,154 @@ async def init_db():
     status: Mapped[str] = mapped_column(default="مفتوحة") # مفتوحة، مغلقة، قيد المتابعة
     category: Mapped[str] = mapped_column(default="الدعم العام")
     claimed_by: Mapped[int] = mapped_column(nullable=True)
+from flask import Flask, render_template_string, request, redirect, url_for
+
+app = Flask(__name__)
+
+DASHBOARD_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>OBT System - لوحة التحكم الإدارية</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --accent: #6366f1;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+        .sidebar { width: 280px; background: #090d16; border-left: 1px solid #334155; padding: 20px; display: flex; flex-direction: column; }
+        .sidebar h2 { font-size: 22px; color: var(--accent); margin-bottom: 30px; text-align: center; }
+        .sidebar a { color: var(--muted); text-decoration: none; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; display: block; font-weight: 500; transition: 0.2s; }
+        .sidebar a:hover, .sidebar a.active { background: var(--accent); color: white; }
+        .main { flex: 1; padding: 40px; box-sizing: border-box; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid #334155; }
+        .card { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 20px; }
+        .card h3 { margin-top: 0; color: var(--text); border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        .form-group { margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; }
+        .form-control { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; color: var(--text); border-radius: 8px; margin-top: 5px; box-sizing: border-box; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #475569; transition: .3s; border-radius: 26px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background: var(--success); }
+        input:checked + .slider:before { transform: translateX(24px); }
+        .btn { background: var(--accent); color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn:hover { opacity: 0.9; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid #334155; text-align: center; }
+        .stat-card span { color: var(--muted); font-size: 14px; }
+        .stat-card h2 { margin: 10px 0 0 0; color: var(--success); }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; text-align: right; border-bottom: 1px solid #334155; font-size: 14px; }
+        th { color: var(--muted); }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>🚀 OBT System</h2>
+        <a href="/?tab=overview">📊 نظرة عامة</a>
+        <a href="/?tab=security">🛡️ نظام الحماية</a>
+        <a href="/?tab=tickets" class="active">🎫 نظام التذاكر</a>
+        <a href="/?tab=economy">💰 الاقتصاد والنقاط</a>
+        <a href="#" style="color: var(--danger); margin-top: auto;">🚪 تسجيل الخروج</a>
+    </div>
+
+    <div class="main">
+        <div class="header">
+            <h2 style="margin:0;">إدارة نظام التذاكر المتقدم</h2>
+            <span style="background: rgba(34, 197, 94, 0.1); color: var(--success); padding: 6px 15px; border-radius: 20px; font-weight: bold;">● النظام يعمل بكفاءة</span>
+        </div>
+
+        {% if tab == 'tickets' %}
+        <div class="card">
+            <h3>لوحات التذاكر النشطة</h3>
+            <p style="color: var(--muted); font-size: 13px;">إخصاص رتب الدعم الفني وتصنيفات التذاكر التلقائية.</p>
+            
+            <form method="POST">
+                <div style="margin-bottom: 15px;">
+                    <label><strong>رتبة الإشراف والدعم الفني</strong></label>
+                    <input type="text" class="form-control" value="مشرف الدعم الفني" name="support_role">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label><strong>رسالة الترحيب داخل التذكرة</strong></label>
+                    <textarea class="form-control" rows="3" name="ticket_welcome">مرحباً بك! يرجى توضيح مشكلتك وسيقوم فريق الدعم بالرد عليك في أقرب وقت.</textarea>
+                </div>
+                <button type="submit" class="btn">حفظ إعدادات التذاكر</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3>سجل التذاكر الحالية</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>رقم التذكرة</th>
+                        <th>صاحب التذكرة</th>
+                        <th>القسم</th>
+                        <th>الحالة</th>
+                        <th>المسؤول</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>#1042</td>
+                        <td>أحمد محمد</td>
+                        <td>الدعم الفني العام</td>
+                        <td><span style="color: var(--success);">مفتوحة</span></td>
+                        <td>غير مسند</td>
+                    </tr>
+                    <tr>
+                        <td>#1041</td>
+                        <td>سارة خالد</td>
+                        <td>شكاوى الإدارة</td>
+                        <td><span style="color: var(--warning);">قيد المتابعة</span></td>
+                        <td>مشرف الأمان</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="grid">
+            <div class="stat-card">
+                <span>التذاكر المفتوحة حالياً</span>
+                <h2 style="color: var(--warning);">12 تذكرة</h2>
+            </div>
+            <div class="stat-card">
+                <span>متوسط وقت الرد</span>
+                <h2 style="color: var(--success);">1.4 دقيقة</h2>
+            </div>
+            <div class="stat-card">
+                <span>إجمالي التذاكر المغلقة</span>
+                <h2 style="color: var(--accent);">1,420</h2>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>نظرة سريعة على أداء السيرفر</h3>
+            <p style="color: var(--muted);">انتقل إلى تبويب التذاكر من القائمة الجانبية لإدارة اللوحات والصلاحيات بشكل كامل.</p>
+        </div>
+        {% endif %}
+    </div>
+
+</body>
+</html>
+"""
+
+@app.route("/", methods=["GET", "POST"])
+def dashboard():
+    tab = request.args.get('tab', 'overview')
+    if request.method == "POST":
+        return redirect(url_for("dashboard", tab=tab))
+    return render_template_string(DASHBOARD_TEMPLATE, tab=tab)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8080, debug=True)
+    
