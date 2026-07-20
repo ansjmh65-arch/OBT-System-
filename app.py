@@ -1,33 +1,441 @@
 import os
+import re
+import asyncio
 from threading import Thread
-from flask import Flask, render_template_string, request, redirect, url_for
-from sqlalchemy import create_engine, Column, Integer, String, Boolean
-from sqlalchemy.orm import declarative_base, sessionmaker
+from datetime import datetime, timedelta
+from typing import List, Optional
+
+from flask import Flask, render_template_string, request, redirect, url_for, flash, session
+from sqlalchemy import (
+    BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Integer, 
+    String, Text, JSON, UniqueConstraint, create_engine, func
+)
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
+
 import discord
 from discord.ext import commands
+from discord import app_commands
 
-# --- إعداد تطبيق الـ Flask (الداشبورد) ---
+# --- 1. إعداد تطبيق Flask ولوحة التحكم ---
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "obt_security_secret_2026")
 
-# --- إعداد قاعدة البيانات (SQLAlchemy) ---
+# --- 2. إعداد قاعدة البيانات SQLAlchemy 2.x ---
 database_url = os.environ.get("DATABASE_URL", "sqlite:///obt_system.db")
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
 engine = create_engine(database_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
 
-# --- نماذج قاعدة البيانات (Models) تشمل كافة الأقسام ---
+class Base(DeclarativeBase):
+    pass
+
 class GuildSettings(Base):
     __tablename__ = "guild_settings"
-    id = Column(Integer, primary_key=True, index=True)
-    guild_id = Column(String, unique=True, index=True)
-    prefix = Column(String, default="!")
+    guild_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, index=True)
+    prefix: Mapped[str] = mapped_column(String(10), default="!")
+    security_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     
-    # إعدادات الحماية
-    anti_spam = Column(Boolean, default=True)
-    anti_raid = Column(Boolean, default=True)
+    security: Mapped["SecuritySettings"] = relationship(back_populates="guild", uselist=False, cascade="all, delete-orphan")
+    moderation_cases: Mapped[List["ModerationCase"]] = relationship(back_populates="guild", cascade="all, delete-orphan")
+    security_stats: Mapped["SecurityStats"] = relationship(back_populates="guild", uselist=False, cascade="all, delete-orphan")
+
+class SecuritySettings(Base):
+    __tablename__ = "security_settings"
+    guild_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("guild_settings.guild_id", ondelete="CASCADE"), primary_key=True)
+    
+    # الـ 24 موديول حماية (تفعيل أو تعطيل)
+    anti_spam: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_flood: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_duplicate: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_mass_mentions: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_invites: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_external_links: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_scam: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_phishing: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_bad_words: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_caps: Mapped[bool] = mapped_column(Boolean, default=False)
+    anti_emoji: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_sticker: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_gif: Mapped[bool] = mapped_column(Boolean, default=False)
+    anti_attachment: Mapped[bool] = mapped_column(Boolean, default=False)
+    anti_bot_add: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_webhook: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_raid: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_mass_join: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_fake_accounts: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_newly_created: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_nickname_abuse: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_role_abuse: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_channel_abuse: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_permission_abuse: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # العقوبات لكل موديول أو العقوبة الافتراضية
+    punishment_type: Mapped[str] = mapped_column(String(30), default="timeout") # delete, warn, timeout, kick, ban
+    module_punishments: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+    # القوائم البيضاء والسوداء
+    whitelist: Mapped[Optional[dict]] = mapped_column(JSON, default={"roles": [], "members": [], "channels": []})
+    blacklist: Mapped[Optional[dict]] = mapped_column(JSON, default={"words": [], "domains": [], "links": [], "invites": []})
+
+    # نظام التحقق (Verification)
+    verification_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    verification_channel_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    verification_role_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+
+    guild: Mapped["GuildSettings"] = relationship(back_populates="security")
+
+class SecurityStats(Base):
+    __tablename__ = "security_stats"
+    guild_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("guild_settings.guild_id", ondelete="CASCADE"), primary_key=True)
+    messages_blocked: Mapped[int] = mapped_column(Integer, default=0)
+    members_punished: Mapped[int] = mapped_column(Integer, default=0)
+    spam_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    raid_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    scam_links_blocked: Mapped[int] = mapped_column(Integer, default=0)
+    verification_count: Mapped[int] = mapped_column(Integer, default=0)
+
+    guild: Mapped["GuildSettings"] = relationship(back_populates="security_stats")
+
+class ModerationCase(Base):
+    __tablename__ = "moderation_cases"
+    case_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("guild_settings.guild_id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    moderator_id: Mapped[int] = mapped_column(BigInteger)
+    action: Mapped[str] = mapped_column(String(50))
+    reason: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    guild: Mapped["GuildSettings"] = relationship(back_populates="moderation_cases")
+
+Base.metadata.create_all(bind=engine)
+
+# --- 3. إعداد بوت ديسكورد والأحداث الأمنية ---
+intents = discord.Intents.default()
+intents.message_content = True
+intents.members = True
+intents.guilds = True
+intents.moderation = True
+
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+class VerificationView(discord.ui.View):
+    """زر التحقق التفاعلي المستمر للأعضاء الجدد"""
+    def __init__(self, role_id: int):
+        super().__init__(timeout=None)
+        self.role_id = role_id
+
+    @discord.ui.button(label="تحقق الآن (Verify)", style=discord.ButtonStyle.green, custom_id="obt_verify_persistent_btn")
+    async def verify_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        role = interaction.guild.get_role(self.role_id)
+        if not role:
+            await interaction.response.send_message("❌ عذراً، رتبة التحقق غير مُعرّفة بشكل صحيح في النظام.", ephemeral=True)
+            return
+        
+        if role in interaction.user.roles:
+            await interaction.response.send_message("✅ أنت متحقق بالفعل في هذا السيرفر.", ephemeral=True)
+        else:
+            await interaction.user.add_roles(role, reason="اجتياز نظام التحقق الأمني في OBT System")
+            
+            # تحديث الإحصائيات في قاعدة البيانات
+            db = SessionLocal()
+            try:
+                stats = db.query(SecurityStats).filter_by(guild_id=interaction.guild.id).first()
+                if stats:
+                    stats.verification_count += 1
+                    db.commit()
+            finally:
+                db.close()
+                
+            await interaction.response.send_message("🎉 تم التحقق بنجاح! تم منحك رتبة العضوية.", ephemeral=True)
+
+
+@bot.event
+async def on_ready():
+    print(f'✅ تم تسجيل الدخول بنجاح كـ {bot.user} (نظام OBT الأمني جاهز)')
+    try:
+        synced = await bot.tree.sync()
+        print(f"🔄 تم مزامنة {len(synced)} أمر (Slash Commands) بنجاح.")
+    except Exception as e:
+        print(f"خطأ في مزامنة الأوامر: {e}")
+
+
+def check_whitelist_db(guild_id: int, member: discord.Member, channel: discord.TextChannel) -> bool:
+    """التحقق من القائمة البيضاء (المالك، المشرفون، الرتب، الأعضاء، القنوات المستثناة)"""
+    if member.guild.owner_id == member.id or member.guild_permissions.administrator:
+        return True
+
+    db = SessionLocal()
+    try:
+        sec = db.query(SecuritySettings).filter_by(guild_id=guild_id).first()
+        if not sec or not sec.whitelist:
+            return False
+        
+        wl = sec.whitelist
+        if channel.id in wl.get("channels", []):
+            return True
+        if member.id in wl.get("members", []):
+            return True
+        if any(role.id in wl.get("roles", []) for role in member.roles):
+            return True
+        return False
+    finally:
+        db.close()
+
+
+async def apply_security_action(guild: discord.Guild, member: discord.Member, action: str, reason: str):
+    """تنفيذ العقوبة المحددة وتسجيلها في الإحصائيات وقاعدة البيانات"""
+    db = SessionLocal()
+    try:
+        stats = db.query(SecurityStats).filter_by(guild_id=guild.id).first()
+        if stats:
+            stats.members_punished += 1
+            db.commit()
+
+        if action == "delete":
+            return
+        elif action == "warn":
+            case = ModerationCase(guild_id=guild.id, user_id=member.id, moderator_id=bot.user.id, action="warn", reason=reason)
+            db.add(case)
+            db.commit()
+            try:
+                await member.send(f"⚠️ تلقيت تحذيراً أمنياً في سيرفر **{guild.name}**.\nالسبب: {reason}")
+            except:
+                pass
+        elif action == "timeout":
+            until = datetime.utcnow() + timedelta(minutes=10)
+            await member.timeout(until, reason=reason)
+        elif action == "kick":
+            await member.kick(reason=reason)
+        elif action == "ban":
+            await member.ban(reason=reason, delete_message_seconds=86400)
+    except Exception as e:
+        print(f"خطأ أثناء تنفيذ العقوبة الأمنية: {e}")
+    finally:
+        db.close()
+
+
+# --- مراقب الرسائل لتفعيل حمايات الـ 24 ---
+message_tracker = {}
+raid_tracker = {}
+
+@bot.event
+async def on_message(message: discord.Message):
+    if message.author.bot or not message.guild:
+        return
+
+    db = SessionLocal()
+    try:
+        guild_set = db.query(GuildSettings).filter_by(guild_id=message.guild.id).first()
+        if not guild_set or not guild_set.security_enabled:
+            return
+
+        sec = db.query(SecuritySettings).filter_by(guild_id=message.guild.id).first()
+        stats = db.query(SecurityStats).filter_by(guild_id=message.guild.id).first()
+        if not sec:
+            return
+
+        if check_whitelist_db(message.guild.id, message.author, message.channel):
+            return
+
+        content = message.content
+        punishment = sec.punishment_type or "delete"
+
+        # 1. Anti Bad Words & Blacklist Words
+        blacklist = sec.blacklist or {}
+        bad_words = blacklist.get("words", [])
+        if sec.anti_bad_words and any(word in content.lower() for word in bad_words):
+            await message.delete()
+            if stats:
+                stats.messages_blocked += 1
+                db.commit()
+            await apply_security_action(message.guild, message.author, punishment, "استخدام كلمات محظورة (Bad Words)")
+            return
+
+        # 2. Anti Invite Links & External Links
+        if sec.anti_invites and ("discord.gg/" in content.lower() or "discord.com/invite/" in content.lower()):
+            await message.delete()
+            if stats:
+                stats.messages_blocked += 1
+                db.commit()
+            await apply_security_action(message.guild, message.author, punishment, "إرسال روابط دعوات خارجية")
+            return
+
+        # 3. Anti Scam & Phishing Links
+        if (sec.anti_scam or sec.anti_phishing) and any(d in content.lower() for d in ["free-nitro", "steam-gift", "airdrop", "nitro-gift"]):
+            await message.delete()
+            if stats:
+                stats.messages_blocked += 1
+                stats.scam_links_blocked += 1
+                db.commit()
+            await apply_security_action(message.guild, message.author, "ban", "محاولة نشر روابط احتيالية أو سكام (Scam/Phishing)")
+            return
+
+        # 4. Anti Mass Mentions
+        if sec.anti_mass_mentions and len(message.mentions) > 5:
+            await message.delete()
+            if stats:
+                stats.messages_blocked += 1
+                db.commit()
+            await apply_security_action(message.guild, message.author, punishment, "تنفيذ منشن جماعي مكثف (Mass Mentions)")
+            return
+
+        # 5. Anti Caps
+        if sec.anti_caps and len(content) > 10:
+            caps_ratio = sum(1 for c in content if c.isupper()) / len(content)
+            if caps_ratio > 0.7:
+                await message.delete()
+                return
+
+        # 6. Anti Emoji / Sticker / GIF Spam
+        emoji_count = len(re.findall(r'<a?:\w+:\d+>', content)) + len(re.findall(r'[\U00010000-\U0010ffff]', content))
+        if sec.anti_emoji and emoji_count > 8:
+            await message.delete()
+            return
+
+        if sec.anti_sticker and len(message.stickers) > 0:
+            await message.delete()
+            return
+
+        if sec.anti_gif and ("tenor.com" in content.lower() or "giphy.com" in content.lower()):
+            await message.delete()
+            return
+
+        # 7. Anti Duplicate & Flood (Spam)
+        user_key = (message.guild.id, message.author.id)
+        now_ts = datetime.utcnow().timestamp()
+        if user_key in message_tracker:
+            last_content, last_time = message_tracker[user_key]
+            if last_content == content and (now_ts - last_time) < 5:
+                await message.delete()
+                if stats:
+                    stats.messages_blocked += 1
+                    stats.spam_attempts += 1
+                    db.commit()
+                await apply_security_action(message.guild, message.author, punishment, "إرسال رسائل مكررة (Spam/Duplicate)")
+                return
+        message_tracker[user_key] = (content, now_ts)
+
+    finally:
+        db.close()
+
+
+@bot.event
+async def on_member_join(member: discord.Member):
+    db = SessionLocal()
+    try:
+        sec = db.query(SecuritySettings).filter_by(guild_id=member.guild.id).first()
+        stats = db.query(SecurityStats).filter_by(guild_id=member.guild.id).first()
+        if not sec:
+            return
+
+        # Anti Newly Created Accounts & Fake Accounts (< 2 days)
+        account_age = (datetime.utcnow() - member.created_at.replace(tzinfo=None)).days
+        if sec.anti_newly_created and account_age < 2:
+            await member.kick(reason="الحساب جديد جداً ولا يحقق معايير الأمان")
+            return
+
+        # Anti Bot Add (Unauthorized bots)
+        if member.bot and sec.anti_bot_add:
+            await member.kick(reason="حظر إضافة البوتات غير المعتمدة تلقائياً")
+            return
+
+    finally:
+        db.close()
+
+
+# --- أوامر السلاش العربية بالكامل (Slash Commands) ---
+
+@bot.tree.command(name="تفعيل_الحماية", description="تفعيل نظام الحماية والأمان الشامل في السيرفر")
+@app_commands.checks.has_permissions(administrator=True)
+async def slash_enable_protection(interaction: discord.Interaction):
+    db = SessionLocal()
+    try:
+        guild_set = db.query(GuildSettings).filter_by(guild_id=interaction.guild.id).first()
+        if guild_set:
+            guild_set.security_enabled = True
+            db.commit()
+        await interaction.response.send_message("✅ تم تفعيل نظام الحماية والأمان بنجاح تام.", ephemeral=True)
+    finally:
+        db.close()
+
+@bot.tree.command(name="تعطيل_الحماية", description="تعطيل نظام الحماية والأمان مؤقتاً في السيرفر")
+@app_commands.checks.has_permissions(administrator=True)
+async def slash_disable_protection(interaction: discord.Interaction):
+    db = SessionLocal()
+    try:
+        guild_set = db.query(GuildSettings).filter_by(guild_id=interaction.guild.id).first()
+        if guild_set:
+            guild_set.security_enabled = False
+            db.commit()
+        await interaction.response.send_message("⚠️ تم تعطيل نظام الحماية مؤقتاً.", ephemeral=True)
+    finally:
+        db.close()
+
+@bot.tree.command(name="حالة_الحماية", description="عرض تقرير حالة الحماية والأنظمة المفعلة حالياً")
+async def slash_security_status(interaction: discord.Interaction):
+    db = SessionLocal()
+    try:
+        sec = db.query(SecuritySettings).filter_by(guild_id=interaction.guild.id).first()
+        stats = db.query(SecurityStats).filter_by(guild_id=interaction.guild.id).first()
+        if not sec:
+            await interaction.response.send_message("❌ لا توجد إعدادات أمان محفوظة لهذا السيرفر.", ephemeral=True)
+            return
+
+        embed = discord.Embed(title="🛡️ تقرير الحماية والأنظمة الأمنية الشاملة", color=discord.Color.blurple())
+        embed.add_field(name="حماية السبام والفلود", value="🟢 مفعل" if sec.anti_spam else "🔴 معطل", inline=True)
+        embed.add_field(name="حماية الروابط والدعوات", value="🟢 مفعل" if sec.anti_invites else "🔴 معطل", inline=True)
+        embed.add_field(name="حماية السكام والفشينغ", value="🟢 مفعل" if sec.anti_scam else "🔴 معطل", inline=True)
+        embed.add_field(name="الرسائل المحظورة", value=str(stats.messages_blocked if stats else 0), inline=True)
+        embed.add_field(name="الأعضاء المعاقبون", value=str(stats.members_punished if stats else 0), inline=True)
+        embed.add_field(name="محاولات الهجوم (Raid/Spam)", value=str(stats.spam_attempts if stats else 0), inline=True)
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+    finally:
+        db.close()
+
+@bot.tree.command(name="التحقق", description="إنشاء رسالة التحقق والأزرار التفاعلية للأعضاء الجدد")
+@app_commands.checks.has_permissions(administrator=True)
+async def slash_verification(interaction: discord.Interaction):
+    db = SessionLocal()
+    try:
+        sec = db.query(SecuritySettings).filter_by(guild_id=interaction.guild.id).first()
+        if not sec or not sec.verification_role_id:
+            await interaction.response.send_message("❌ يرجى تعيين رتبة التحقق أولاً من لوحة تحكم الويب.", ephemeral=True)
+            return
+
+        view = VerificationView(sec.verification_role_id)
+        embed = discord.Embed(
+            title="🔒 نظام التحقق الأمني في السيرفر",
+            description="يرجى الضغط على الزر أدناه لاجتياز التحقق الأمني والحصول على صلاحية الوصول الكامل للسيرفر.",
+            color=discord.Color.green()
+        )
+        await interaction.channel.send(embed=embed, view=view)
+        await interaction.response.send_message("✅ تم إنشاء لوحة التحقق في هذه القناة بنجاح.", ephemeral=True)
+    finally:
+        db.close()
+
+
+# --- 4. مسارات لوحة التحكم Flask (Security Dashboard) ---
+
+DASHBOARD_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>OBT System - لوحة الأمان المتقدمة</title>
+    <style>
+        :root { --bg: #0f172a; --card: #1e293b; --accent: #6366f1; --text: #f8fafc; --muted: #94a3b8; --success: #22c55e; }
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+        .sidebar { width: 280px; background: #090d16; border-left: 1px solid #334155; padding: 20px; box-sizing: border-box; }
+        .sidebar h2 { font-size: 18px; color: var(--accent); text-align: center; margin-bottom: 25px; }
+        .sidebar a { color: var(--muted); text-decoration: none; padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; display: block; font-size: 14px; transition: 0.2s; }
+        .sidebar a:hover, .sidebar a.active { background: var(--accent); color: white; }
+        .main { flex: 1; padding: 40px; box-sizing: border-box; overflow-y: auto; }
+        .card { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 20px; }
+        .card h3 { margin    anti_raid = Column(Boolean, default=True)
     anti_link = Column(Boolean, default=False)
     anti_scam = Column(Boolean, default=True)
     
