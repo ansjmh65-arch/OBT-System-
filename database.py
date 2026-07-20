@@ -149,6 +149,332 @@ class Ticket(Base):
     closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     guild: Mapped["GuildSettings"] = relationship(back_populates="tickets")
+    panel: Mapped["TicketPanel"] = relationship(back_populates="panel")
+
+
+# ==========================================================
+# 6. EconomyPoints (نقاط الاقتصاد والعملات)
+# ==========================================================
+class EconomyPoint(Base):
+    __tablename__ = "economy_points"
+    __table_args__ = (UniqueConstraint("guild_id", "user_id", name="uq_guild_user_economy"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("guild_settings.guild_id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    points: Mapped[float] = mapped_column(Float, default=0.0)
+    total_earned: Mapped[float] = mapped_column(Float, default=0.0)
+    total_spent: Mapped[float] = mapped_column(Float, default=0.0)
+    season_id: Mapped[str] = mapped_column(String(50), default="season_1")
+    last_daily: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    guild: Mapped["GuildSettings"] = relationship(back_populates="economy_points")
+
+
+# ==========================================================
+# 7 & 8. ClanSystem & ClanMembers (نظام العشائر والكلانات)
+# ==========================================================
+class Clan(Base):
+    __tablename__ = "clans"
+
+    clan_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("guild_settings.guild_id", ondelete="CASCADE"), index=True)
+    owner_id: Mapped[int] = mapped_column(BigInteger)
+    name: Mapped[str] = mapped_column(String(50), unique=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    logo: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    total_points: Mapped[float] = mapped_column(Float, default=0.0)
+    level: Mapped[int] = mapped_column(Integer, default=1)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    guild: Mapped["GuildSettings"] = relationship(back_populates="clans")
+    members: Mapped[List["ClanMember"]] = relationship(back_populates="clan", cascade="all, delete-orphan")
+
+
+class ClanMember(Base):
+    __tablename__ = "clan_members"
+    __table_args__ = (UniqueConstraint("clan_id", "user_id", name="uq_clan_user"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    clan_id: Mapped[int] = mapped_column(Integer, ForeignKey("clans.clan_id", ondelete="CASCADE"))
+    user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    role: Mapped[str] = mapped_column(String(20), default="member") # owner, admin, member
+    joined_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    clan: Mapped["Clan"] = relationship(back_populates="members")
+
+
+# ==========================================================
+# 9. CreatorProgram (برنامج صناع المحتوى)
+# ==========================================================
+class CreatorProgram(Base):
+    __tablename__ = "creator_program"
+    __table_args__ = (UniqueConstraint("guild_id", "user_id", name="uq_guild_creator"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("guild_settings.guild_id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    platform: Mapped[str] = mapped_column(String(50)) # YouTube, Twitch, TikTok, etc.
+    channel_url: Mapped[str] = mapped_column(String(255))
+    followers: Mapped[int] = mapped_column(Integer, default=0)
+    approved: Mapped[bool] = mapped_column(Boolean, default=False)
+    
+    applied_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+# ==========================================================
+# 10. WelcomeSettings (إعدادات الترحيب والوداع)
+# ==========================================================
+class WelcomeSettings(Base):
+    __tablename__ = "welcome_settings"
+
+    guild_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("guild_settings.guild_id", ondelete="CASCADE"), primary_key=True)
+    welcome_channel: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    goodbye_channel: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    auto_role: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    
+    welcome_embed: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    goodbye_embed: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+    guild: Mapped["GuildSettings"] = relationship(back_populates="welcome")
+
+
+# ==========================================================
+# 11. LogSettings (قنوات السجلات الموحدة)
+# ==========================================================
+class LogSettings(Base):
+    __tablename__ = "log_settings"
+
+    guild_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("guild_settings.guild_id", ondelete="CASCADE"), primary_key=True)
+    
+    member_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    message_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    voice_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    moderation_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    role_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    channel_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    emoji_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    sticker_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    invite_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    webhook_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    server_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    ticket_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    security_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    points_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    clan_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    creator_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    backup_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    dashboard_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    command_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    error_logs: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+
+    guild: Mapped["GuildSettings"] = relationship(back_populates="logs")
+
+
+# ==========================================================
+# 12. DashboardAuditLogs (سجلات تدقيق لوحة التحكم)
+# ==========================================================
+class DashboardAuditLog(Base):
+    __tablename__ = "dashboard_audit_logs"
+
+    log_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("guild_settings.guild_id", ondelete="CASCADE"), index=True)
+    admin_id: Mapped[int] = mapped_column(BigInteger)
+    action_type: Mapped[str] = mapped_column(String(100))
+    page: Mapped[str] = mapped_column(String(100))
+    old_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    new_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
+    
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    guild: Mapped["GuildSettings"] = relationship(back_populates="audit_logs")
+
+
+# ==========================================================
+# 13. Backups (النسخ الاحتياطي)
+# ==========================================================
+class Backup(Base):
+    __tablename__ = "backups"
+
+    backup_id: Mapped[str] = mapped_column(String(50), primary_key=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("guild_settings.guild_id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    file_name: Mapped[str] = mapped_column(String(255))
+    file_path: Mapped[str] = mapped_column(String(500))
+    file_size: Mapped[int] = mapped_column(Integer, default=0) # بالبايت
+    created_by: Mapped[int] = mapped_column(BigInteger)
+    automatic_backup: Mapped[bool] = mapped_column(Boolean, default=False)
+    version: Mapped[str] = mapped_column(String(20), default="1.0")
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    guild: Mapped["GuildSettings"] = relationship(back_populates="backups")
+
+
+# ==========================================================
+# 14. ScheduledBackups (النسخ الاحتياطي المجدول)
+# ==========================================================
+class ScheduledBackup(Base):
+    __tablename__ = "scheduled_backups"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("guild_settings.guild_id", ondelete="CASCADE"), index=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    interval: Mapped[str] = mapped_column(String(20), default="daily") # daily, weekly
+    last_backup: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    next_backup: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    keep_last_backups: Mapped[int] = mapped_column(Integer, default=5)
+
+    guild: Mapped["GuildSettings"] = relationship(back_populates="scheduled_backups")
+
+
+# ==========================================================
+# 15. LevelSystem (نظام المستويات والـ XP)
+# ==========================================================
+class LevelSystem(Base):
+    __tablename__ = "level_system"
+    __table_args__ = (UniqueConstraint("guild_id", "user_id", name="uq_guild_user_level"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    xp: Mapped[int] = mapped_column(Integer, default=0)
+    level: Mapped[int] = mapped_column(Integer, default=0)
+    total_messages: Mapped[int] = mapped_column(Integer, default=0)
+
+
+# ==========================================================
+# 16. ReactionRoles (رتب التفاعل)
+# ==========================================================
+class ReactionRole(Base):
+    __tablename__ = "reaction_roles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    message_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    emoji: Mapped[str] = mapped_column(String(100))
+    role_id: Mapped[int] = mapped_column(BigInteger)
+
+# =======================================    welcome_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    automod_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    backup_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    security: Mapped["SecuritySettings"] = relationship(back_populates="guild", uselist=False, cascade="all, delete-orphan")
+    logs: Mapped["LogSettings"] = relationship(back_populates="guild", uselist=False, cascade="all, delete-orphan")
+    welcome: Mapped["WelcomeSettings"] = relationship(back_populates="guild", uselist=False, cascade="all, delete-orphan")
+    tickets: Mapped[List["Ticket"]] = relationship(back_populates="guild", cascade="all, delete-orphan")
+    ticket_panels: Mapped[List["TicketPanel"]] = relationship(back_populates="guild", cascade="all, delete-orphan")
+    moderation_cases: Mapped[List["ModerationCase"]] = relationship(back_populates="guild", cascade="all, delete-orphan")
+    backups: Mapped[List["Backup"]] = relationship(back_populates="guild", cascade="all, delete-orphan")
+    audit_logs: Mapped[List["DashboardAuditLog"]] = relationship(back_populates="guild", cascade="all, delete-orphan")
+    scheduled_backups: Mapped[List["ScheduledBackup"]] = relationship(back_populates="guild", cascade="all, delete-orphan")
+    economy_points: Mapped[List["EconomyPoint"]] = relationship(back_populates="guild", cascade="all, delete-orphan")
+    clans: Mapped[List["Clan"]] = relationship(back_populates="guild", cascade="all, delete-orphan")
+
+
+# ==========================================================
+# 2. SecuritySettings (إعدادات الأمان والحماية)
+# ==========================================================
+class SecuritySettings(Base):
+    __tablename__ = "security_settings"
+
+    guild_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("guild_settings.guild_id", ondelete="CASCADE"), primary_key=True)
+    anti_spam: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_spam_limit: Mapped[int] = mapped_column(Integer, default=5)
+    anti_duplicate_messages: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_caps: Mapped[bool] = mapped_column(Boolean, default=False)
+    anti_mass_mentions: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_links: Mapped[bool] = mapped_column(Boolean, default=False)
+    anti_invites: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_bots: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_webhooks: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_scam: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_phishing: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_raid: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_mass_join: Mapped[bool] = mapped_column(Boolean, default=True)
+    anti_bad_words: Mapped[bool] = mapped_column(Boolean, default=True)
+    verification_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    punishment_type: Mapped[str] = mapped_column(String(30), default="timeout") # timeout, kick, ban
+    
+    automod_config: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    whitelist: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    blacklist: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+
+    guild: Mapped["GuildSettings"] = relationship(back_populates="security")
+
+
+# ==========================================================
+# 3. ModerationCases (سجلات الإشراف والعقوبات)
+# ==========================================================
+class ModerationCase(Base):
+    __tablename__ = "moderation_cases"
+
+    case_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("guild_settings.guild_id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    moderator_id: Mapped[int] = mapped_column(BigInteger)
+    action: Mapped[str] = mapped_column(String(50)) # warn, mute, kick, ban
+    reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    duration: Mapped[Optional[int]] = mapped_column(Integer, nullable=True) # بالثواني
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    guild: Mapped["GuildSettings"] = relationship(back_populates="moderation_cases")
+
+
+# ==========================================================
+# 4. TicketPanels (لوحات التذاكر)
+# ==========================================================
+class TicketPanel(Base):
+    __tablename__ = "ticket_panels"
+
+    panel_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("guild_settings.guild_id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    channel_id: Mapped[int] = mapped_column(BigInteger)
+    category_id: Mapped[int] = mapped_column(BigInteger)
+    transcript_channel: Mapped[int] = mapped_column(BigInteger)
+    
+    support_roles: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    questions: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    auto_close: Mapped[bool] = mapped_column(Boolean, default=False)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    guild: Mapped["GuildSettings"] = relationship(back_populates="ticket_panels")
+    tickets: Mapped[List["Ticket"]] = relationship(back_populates="panel", cascade="all, delete-orphan")
+
+
+# ==========================================================
+# 5. Tickets (التذاكر النشطة)
+# ==========================================================
+class Ticket(Base):
+    __tablename__ = "tickets"
+
+    ticket_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("guild_settings.guild_id", ondelete="CASCADE"), index=True)
+    panel_id: Mapped[int] = mapped_column(Integer, ForeignKey("ticket_panels.panel_id", ondelete="CASCADE"))
+    creator_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    channel_id: Mapped[int] = mapped_column(BigInteger, unique=True)
+    claimed_by: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="open") # open, closed, archived
+    rating: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    guild: Mapped["GuildSettings"] = relationship(back_populates="tickets")
     panel: Mapped["TicketPanel"] = relationship(back_populates="tickets")
 
 
