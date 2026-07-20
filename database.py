@@ -2430,4 +2430,13 @@ class UserEconomy(Base):
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        
+        class Ticket(Base):
+    __tablename__ = "tickets"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column()
+    channel_id: Mapped[int] = mapped_column()
+    user_id: Mapped[int] = mapped_column()
+    status: Mapped[str] = mapped_column(default="مفتوحة") # مفتوحة، مغلقة، قيد المتابعة
+    category: Mapped[str] = mapped_column(default="الدعم العام")
+    claimed_by: Mapped[int] = mapped_column(nullable=True)
