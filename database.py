@@ -2590,4 +2590,22 @@ def dashboard():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080, debug=True)
-    
+    class EconomyTransaction(Base):
+    __tablename__ = "economy_transactions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column()
+    sender_id: Mapped[int] = mapped_column()
+    receiver_id: Mapped[int] = mapped_column()
+    amount: Mapped[int] = mapped_column()
+    timestamp: Mapped[str] = mapped_column(default="2026-07-20")
+    class Clan(Base):
+    __tablename__ = "clans"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column()
+    clan_name: Mapped[str] = mapped_column()
+    leader_id: Mapped[int] = mapped_column()
+    level: Mapped[int] = mapped_column(default=1)
+    points: Mapped[int] = mapped_column(default=0)
+
