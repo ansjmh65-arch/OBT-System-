@@ -3,109 +3,78 @@ import threading
 import asyncio
 import discord
 from discord.ext import commands
-from flask import Flask, render_template
+from flask import Flask, render_template, request, redirect, url_for
+from models import db, ServerConfig
 
-# ==========================================
-# 1. إعداد لوحة التحكم (الداشبورد - Flask)
-# ==========================================
+# إعداد تطبيق Flask
 app = Flask(__name__, template_folder='templates')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///obt_system.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-@app.route('/')
-def home():
-    return "✅ OBT-System is Running Online!"
+db.init_app(app)
 
-@app.route('/dashboard')
-def dashboard():
-    return render_template('dashboard.html')
+with app.app_context():
+    db.create_all()
 
-@app.route('/dashboard/analytics')
-def dashboard_analytics():
-    return render_template('analytics.html')
+# مسارات لوحة التحكم وحفظ البيانات
+@app.route('/dashboard', methods=['GET', 'POST'])
+def dashboard_home():
+    config = ServerConfig.query.filter_by(guild_id="default_guild").first()
+    if not config:
+        config = ServerConfig(guild_id="default_guild")
+        db.session.add(config)
+        db.session.commit()
 
-@app.route('/dashboard/economy')
-def dashboard_economy():
-    return render_template('economy.html')
+    if request.method == 'POST':
+        # استقبال وتحديث حالة الأقسام من الأزرار (Checkboxes)
+        config.security_enabled = 'security_enabled' in request.form
+        config.moderation_enabled = 'moderation_enabled' in request.form
+        config.tickets_enabled = 'tickets_enabled' in request.form
+        config.clans_enabled = 'clans_enabled' in request.form
+        config.economy_enabled = 'economy_enabled' in request.form
+        config.content_creators_enabled = 'content_creators_enabled' in request.form
+        config.welcome_enabled = 'welcome_enabled' in request.form
+        config.logs_enabled = 'logs_enabled' in request.form
+        config.auto_roles_enabled = 'auto_roles_enabled' in request.form
+        config.backup_enabled = 'backup_enabled' in request.form
+        
+        # حفظ النصوص والإعدادات الأخرى إن وجدت
+        config.welcome_message = request.form.get('welcome_message', '')
+        
+        db.session.commit()
+        return redirect(url_for('dashboard_home'))
 
-@app.route('/dashboard/moderation')
-def dashboard_moderation():
-    return render_template('moderation.html')
-
-@app.route('/dashboard/tickets')
-def dashboard_tickets():
-    return render_template('tickets.html')
-
-@app.route('/dashboard/logs')
-def dashboard_logs():
-    return render_template('logs.html')
-
-@app.route('/dashboard/settings')
-def dashboard_settings():
-    return render_template('settings.html')
+    return render_template('dashboard.html', config=config)
 
 def run_flask():
-    # استخراج المنفذ الصحيح من بيئة Railway لتفادي خطأ 502
     port = int(os.environ.get("PORT", 8080))
-    # تشغيل الفلاسك على 0.0.0.0 إجباري في Railway
     app.run(host="0.0.0.0", port=port, use_reloader=False, debug=False)
 
 def keep_alive():
-    # تشغيل الفلاسك كخلفية (Daemon Thread) لكي لا يتعارض مع البوت
     server = threading.Thread(target=run_flask)
-    server.daemon = True # مهم جداً: يضمن بقاء الداشبورد يعمل حتى لو كان هناك تأخير
+    server.daemon = True
     server.start()
 
-# ==========================================
-# 2. إعداد البوت (Discord.py)
-# ==========================================
+# إعداد بوت ديسكورد (Discord.py)
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f"🤖 Logged in as {bot.user.name}")
-    print("✅ Dashboard and Bot are fully operational!")
+    print(f"🤖 Bot Logged in as {bot.user.name}")
 
-async def load_cogs():
-    # التأكد من وجود مجلد cogs لتفادي الأخطاء إذا لم يكن موجوداً
-    if not os.path.exists('./cogs'):
-        os.makedirs('./cogs')
-        
-    for filename in os.listdir('./cogs'):
-        if filename.endswith('.py'):
-            try:
-                await bot.load_extension(f'cogs.{filename[:-3]}')
-                print(f"✅ Loaded Cog: {filename}")
-            except Exception as e:
-                print(f"❌ Failed to load {filename}: {e}")
-
-# ==========================================
-# 3. التشغيل النهائي والآمن للمشروع
-# ==========================================
 async def main():
-    # 1. تشغيل الداشبورد أولاً لتلبية طلب Railway للـ Port (هذا يمنع خطأ 502 نهائياً)
     keep_alive()
-    
-    # 2. تحميل أوامر البوت
-    await load_cogs()
-    
-    # 3. جلب التوكن وتشغيل البوت بذكاء
     TOKEN = os.environ.get("TOKEN")
-    
     if not TOKEN:
-        print("❌ خطأ حرج: التوكن غير موجود في المتغيرات البيئية (Variables) في Railway!")
-        # نبقي التطبيق يعمل كي لا ينهار السيرفر ويظهر خطأ 502 للداشبورد
+        print("❌ تحذير: التوكن غير موجود، الداشبورد ستظل تعمل ولكن البوت توقف.")
         while True:
             await asyncio.sleep(3600)
-            
     try:
         await bot.start(TOKEN)
-    except discord.errors.LoginFailure:
-        print("❌ خطأ: التوكن الذي أدخلته غير صحيح. تأكد منه في Railway.")
-        while True:
-            await asyncio.sleep(3600)
     except Exception as e:
-        print(f"❌ حدث خطأ غير متوقع في البوت: {e}")
+        print(f"❌ خطأ في تشغيل البوت: {e}")
         while True:
             await asyncio.sleep(3600)
 
@@ -113,5 +82,5 @@ if __name__ == '__main__':
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("🛑 OBT-System Shutting down...")
-    
+        print("🛑 Shutting down...")
+        
