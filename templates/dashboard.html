@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة تحكم البوت | {{ guild_name }}</title>
+    <title>OBT-System | لوحة التحكم</title>
     <style>
         :root {
-            --bg-main: #36393f;
-            --bg-sidebar: #2f3136;
-            --bg-card: #202225;
-            --text-color: #ffffff;
-            --text-muted: #b9bbbe;
-            --accent-color: #5865f2;
+            --bg-main: #313338;
+            --bg-sidebar: #2b2d31;
+            --bg-card: #232428;
+            --bg-card-hover: #2b2d31;
+            --accent: #5865f2;
             --accent-hover: #4752c4;
-            --success-color: #3ba55d;
-            --danger-color: #ed4245;
-            --border-color: #4f545c;
+            --text-main: #f2f3f5;
+            --text-muted: #949ba4;
+            --border: #1f2023;
+            --success: #23a55a;
         }
 
         * {
@@ -27,387 +27,342 @@
 
         body {
             background-color: var(--bg-main);
-            color: var(--text-color);
+            color: var(--text-main);
             display: flex;
             height: 100vh;
             overflow: hidden;
         }
 
-        /* القائمة الجانبية */
+        /* القائمة الجانبية (Sidebar) */
         .sidebar {
             width: 280px;
             background-color: var(--bg-sidebar);
+            border-left: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            border-left: 1px solid var(--border-color);
-            transition: all 0.3s ease;
-            z-index: 100;
+            height: 100%;
+            overflow-y: auto;
         }
 
         .sidebar-header {
             padding: 20px;
-            background-color: var(--bg-card);
-            text-align: center;
-            font-weight: bold;
             font-size: 1.1rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .server-id {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin-top: 5px;
-            display: block;
-        }
-
-        .sidebar-menu {
-            list-style: none;
-            overflow-y: auto;
-            flex: 1;
-            padding: 10px;
-        }
-
-        .sidebar-menu li {
-            margin-bottom: 5px;
-        }
-
-        .menu-btn {
-            width: 100%;
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            text-align: right;
-            padding: 12px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.95rem;
+            font-weight: bold;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
             display: flex;
             align-items: center;
             gap: 10px;
-            transition: all 0.2s;
-            text-decoration: none;
         }
 
-        .menu-btn:hover, .menu-btn.active {
-            background-color: var(--accent-color);
-            color: #fff;
+        .menu-category {
+            padding: 15px 20px 5px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        .menu-item {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: 0.2s;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .menu-item:hover, .menu-item.active {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+
+        .menu-item-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* علامة التفعيل الخضراء بجانب الأقسام */
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--success);
+            border-radius: 50%;
         }
 
         /* المحتوى الرئيسي */
         .main-content {
             flex: 1;
+            padding: 30px;
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
-            overflow-y: auto;
-            background-color: var(--bg-main);
+            gap: 20px;
         }
 
-        header {
-            background-color: var(--bg-sidebar);
-            padding: 15px 30px;
+        .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .content-body {
-            padding: 30px;
-            max-width: 1000px;
-            width: 100%;
-            margin: 0 auto;
-        }
-
-        /* كروت الأقسام وإدخال البيانات */
-        .section-panel {
-            display: none;
             background-color: var(--bg-card);
-            border-radius: 8px;
-            padding: 25px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            margin-bottom: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
         }
 
-        .section-panel.active {
-            display: block;
+        .section-title h1 {
+            font-size: 1.4rem;
+            margin-bottom: 5px;
         }
 
-        h2 {
-            margin-bottom: 20px;
-            border-bottom: 2px solid var(--accent-color);
-            padding-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
+        .section-title p {
             color: var(--text-muted);
             font-size: 0.9rem;
         }
 
-        input[type="text"], input[type="number"], select, textarea {
-            width: 100%;
-            padding: 12px;
-            background-color: var(--bg-main);
-            border: 1px solid var(--border-color);
-            border-radius: 5px;
-            color: white;
-            font-size: 1rem;
+        /* زر التفعيل العام للقسم (Switch) */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
         }
 
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: var(--accent-color);
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
         }
 
-        .switch-group {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background-color: var(--bg-main);
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid var(--border-color);
-            margin-bottom: 15px;
-        }
-
-        /* أزرار الحفظ */
-        .save-btn {
-            background-color: var(--success-color);
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 5px;
-            font-size: 1rem;
+        .slider {
+            position: absolute;
             cursor: pointer;
-            font-weight: bold;
-            transition: background 0.2s;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #4e5058;
+            transition: .3s;
+            border-radius: 26px;
         }
 
-        .save-btn:hover {
-            opacity: 0.9;
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
         }
 
-        /* التوافق مع الهواتف الذكية */
+        input:checked + .slider {
+            background-color: var(--success);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+        /* الكروت الداخلية */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .card-info h3 {
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+            color: var(--text-main);
+        }
+
+        .card-info p {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .card-action {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border);
+            padding-top: 15px;
+        }
+
+        .btn-edit {
+            background-color: var(--bg-sidebar);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 6px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: 0.2s;
+        }
+
+        .btn-edit:hover {
+            background-color: #35373c;
+        }
+
+        /* التجاوب مع الجوال */
         @media (max-width: 768px) {
             body {
                 flex-direction: column;
+                overflow: auto;
             }
             .sidebar {
                 width: 100%;
                 height: auto;
                 max-height: 250px;
-                border-left: none;
-                border-bottom: 1px solid var(--border-color);
             }
-            .sidebar-menu {
-                display: flex;
-                overflow-x: auto;
-                overflow-y: hidden;
-                padding: 10px;
-                gap: 10px;
-            }
-            .sidebar-menu li {
-                margin-bottom: 0;
-                flex-shrink: 0;
-            }
-            .menu-btn {
-                white-space: nowrap;
-                padding: 8px 15px;
-            }
-            .content-body {
-                padding: 15px;
-            }
-            header {
-                padding: 10px 15px;
+            .main-content {
+                overflow: visible;
             }
         }
     </style>
 </head>
 <body>
 
-    <!-- القائمة الجانبية الـ 11 قسماً -->
+    <!-- القائمة الجانبية (Sidebar) مطابقة لـ ProBot -->
     <div class="sidebar">
         <div class="sidebar-header">
-            <span>{{ guild_name }}</span>
-            <span class="server-id">ID: {{ guild_id }}</span>
+            <span>🤖</span> OBT || OBOX
         </div>
-        <ul class="sidebar-menu">
-            <li><button class="menu-btn active" onclick="showSection('section-general', this)"><span>⚙️</span><span>الإعدادات العامة</span></button></li>
-            <li><button class="menu-btn" onclick="showSection('section-protection', this)"><span>🛡️</span><span>الحماية والأمان</span></button></li>
-            <li><button class="menu-btn" onclick="showSection('section-welcomer', this)"><span>👋</span><span>الترحيب والمغادرة</span></button></li>
-            <li><button class="menu-btn" onclick="showSection('section-auto_responder', this)"><span>🤖</span><span>الردود التلقائية</span></button></li>
-            <li><button class="menu-btn" onclick="showSection('section-tickets', this)"><span>🎫</span><span>نظام التذاكر</span></button></li>
-            <li><button class="menu-btn" onclick="showSection('section-logs', this)"><span>📜</span><span>سجل الأحداث</span></button></li>
-            <li><button class="menu-btn" onclick="showSection('section-leveling', this)"><span>⭐</span><span>المستويات والتفاعل</span></button></li>
-            <li><button class="menu-btn" onclick="showSection('section-economy', this)"><span>💰</span><span>نظام الاقتصاد</span></button></li>
-            <li><button class="menu-btn" onclick="showSection('section-clans', this)"><span>⚔️</span><span>نظام الكلانات</span></button></li>
-            <li><button class="menu-btn" onclick="showSection('section-analytics', this)"><span>📊</span><span>الإحصائيات والتحليلات</span></button></li>
-            <li><button class="menu-btn" onclick="showSection('section-moderation', this)"><span>🔨</span><span>أوامر الإدارة</span></button></li>
-        </ul>
+
+        <div class="menu-category">عام</div>
+        <a href="#" class="menu-item">
+            <div class="menu-item-content"><span>⚙️</span> إعدادات السيرفر</div>
+        </a>
+        <a href="#" class="menu-item">
+            <div class="menu-item-content"><span>📜</span> رسائل الپريميوم</div>
+        </a>
+
+        <div class="menu-category">قائمة الخصائص</div>
+        <a href="#" class="menu-item active">
+            <div class="menu-item-content"><span>⚡</span> الأوامر العامة</div>
+            <div class="status-dot"></div>
+        </a>
+        <a href="#" class="menu-item">
+            <div class="menu-item-content"><span>👋</span> الترحيب & المغادرة</div>
+            <div class="status-dot"></div>
+        </a>
+        <a href="#" class="menu-item">
+            <div class="menu-item-content"><span>💬</span> الرد التلقائي</div>
+            <div class="status-dot"></div>
+        </a>
+        <a href="#" class="menu-item">
+            <div class="menu-item-content"><span>🛡️</span> الإشراف</div>
+            <div class="status-dot"></div>
+        </a>
+        <a href="#" class="menu-item">
+            <div class="menu-item-content"><span>👁️</span> الرقابة التلقائية</div>
+            <div class="status-dot"></div>
+        </a>
+        <a href="#" class="menu-item">
+            <div class="menu-item-content"><span>📋</span> اللوق</div>
+            <div class="status-dot"></div>
+        </a>
     </div>
 
-    <!-- المحتوى الرئيسي والأقسام -->
+    <!-- المحتوى الرئيسي (Main Content) -->
     <div class="main-content">
-        <header>
-            <h3>لوحة التحكم الشاملة للبوت</h3>
-            <span style="color: var(--success-color); font-size: 0.9rem;">● متصل بالسيرفر</span>
-        </header>
-
-        <div class="content-body">
-            <form action="#" method="POST" onsubmit="event.preventDefault(); alert('تم حفظ الإعدادات بنجاح في قاعدة البيانات!');">
-                
-                <!-- 1. الإعدادات العامة -->
-                <div id="section-general" class="section-panel active">
-                    <h2>⚙️ الإعدادات العامة</h2>
-                    <div class="form-group">
-                        <label>بادئة الأوامر (Prefix)</label>
-                        <input type="text" value="!" placeholder="مثال: ! أو $">
-                    </div>
-                    <div class="form-group">
-                        <label>لغة البوت داخل السيرفر</label>
-                        <select>
-                            <option value="ar">العربية</option>
-                            <option value="en">English</option>
-                        </select>
-                    </div>
-                    <button class="save-btn">حفظ التغييرات</button>
-                </div>
-
-                <!-- 2. الحماية -->
-                <div id="section-protection" class="section-panel">
-                    <h2>🛡️ نظام الحماية (Protection)</h2>
-                    <div class="switch-group">
-                        <span>منع نشر الروابط والدعوات الخبيثة</span>
-                        <input type="checkbox" checked style="width:20px; height:20px;">
-                    </div>
-                    <div class="switch-group">
-                        <span>الحماية من السبام والتكرار السريع</span>
-                        <input type="checkbox" checked style="width:20px; height:20px;">
-                    </div>
-                    <button class="save-btn">حفظ إعدادات الحماية</button>
-                </div>
-
-                <!-- 3. الترحيب والمغادرة -->
-                <div id="section-welcomer" class="section-panel">
-                    <h2>👋 نظام الترحيب والمغادرة</h2>
-                    <div class="form-group">
-                        <label>روم إرسال الترحيب</label>
-                        <input type="text" placeholder="ايدي الروم">
-                    </div>
-                    <div class="form-group">
-                        <label>رسالة الترحيب بالأعضاء الجدد</label>
-                        <textarea rows="4" placeholder="أهلاً بك [user] في سيرفرنا!"></textarea>
-                    </div>
-                    <button class="save-btn">حفظ الترحيب</button>
-                </div>
-
-                <!-- 4. الردود التلقائية -->
-                <div id="section-auto_responder" class="section-panel">
-                    <h2>🤖 الردود التلقائية</h2>
-                    <div class="form-group">
-                        <label>الكلمة المفتاحية</label>
-                        <input type="text" placeholder="مثال: السلام عليكم">
-                    </div>
-                    <div class="form-group">
-                        <label>رد البوت التلقائي</label>
-                        <input type="text" placeholder="مثال: وعليكم السلام ورحمة الله">
-                    </div>
-                    <button class="save-btn">إضافة الرد</button>
-                </div>
-
-                <!-- 5. التذاكر -->
-                <div id="section-tickets" class="section-panel">
-                    <h2>🎫 نظام التذاكر (Tickets)</h2>
-                    <div class="form-group">
-                        <label>فئة رومات التذاكر (Category ID)</label>
-                        <input type="number" placeholder="ايدي الكاتيجوري">
-                    </div>
-                    <button class="save-btn">تفعيل التذاكر</button>
-                </div>
-
-                <!-- 6. سجل الأحداث -->
-                <div id="section-logs" class="section-panel">
-                    <h2>📜 سجل الأحداث (Logs)</h2>
-                    <div class="form-group">
-                        <label>روم تسجيل المحذوفات والتعديلات</label>
-                        <input type="text" placeholder="ايدي روم اللوج">
-                    </div>
-                    <button class="save-btn">حفظ اللوج</button>
-                </div>
-
-                <!-- 7. المستويات -->
-                <div id="section-leveling" class="section-panel">
-                    <h2>⭐ نظام المستويات (Leveling)</h2>
-                    <div class="switch-group">
-                        <span>تفعيل نقاط الخبرة XP</span>
-                        <input type="checkbox" checked style="width:20px; height:20px;">
-                    </div>
-                    <button class="save-btn">حفظ المستويات</button>
-                </div>
-
-                <!-- 8. الاقتصاد -->
-                <div id="section-economy" class="section-panel">
-                    <h2>💰 نظام الاقتصاد (Economy)</h2>
-                    <div class="form-group">
-                        <label>اسم العملة</label>
-                        <input type="text" value="ريال">
-                    </div>
-                    <button class="save-btn">حفظ الاقتصاد</button>
-                </div>
-
-                <!-- 9. الكلانات -->
-                <div id="section-clans" class="section-panel">
-                    <h2>⚔️ نظام الكلانات (Clans)</h2>
-                    <div class="switch-group">
-                        <span>تفعيل منافسات الكلانات</span>
-                        <input type="checkbox" checked style="width:20px; height:20px;">
-                    </div>
-                    <button class="save-btn">حفظ الكلانات</button>
-                </div>
-
-                <!-- 10. الإحصائيات -->
-                <div id="section-analytics" class="section-panel">
-                    <h2>📊 إحصائيات السيرفر (Analytics)</h2>
-                    <p style="color: var(--text-muted); margin-bottom: 15px;">عرض إجمالي الأعضاء والنشاط العام للسيرفر بشكل لحظي.</p>
-                    <button class="save-btn">تحديث البيانات</button>
-                </div>
-
-                <!-- 11. الإدارة -->
-                <div id="section-moderation" class="section-panel">
-                    <h2>🔨 أوامر الإدارة (Moderation)</h2>
-                    <div class="form-group">
-                        <label>رتبة المسؤولين المسموح لهم بالحظر والطرد</label>
-                        <input type="text" placeholder="مثال: Admin">
-                    </div>
-                    <button class="save-btn">حفظ الإدارة</button>
-                </div>
-
-            </form>
+        
+        <!-- رأس القسم الحالي مع زر التفعيل -->
+        <div class="section-header">
+            <div class="section-title">
+                <h1>الأوامر العامة</h1>
+                <p>تحكم بأوامر البوت العامة المتوفرة لأعضاء السيرفر</p>
+            </div>
+            <label class="switch">
+                <input type="checkbox" checked>
+                <span class="slider"></span>
+            </label>
         </div>
+
+        <!-- شبكة الكروت (الأوامر والخيارات) -->
+        <div class="cards-grid">
+            
+            <!-- كرت أمر moveme -->
+            <div class="card">
+                <div class="card-info">
+                    <h3>/moveme</h3>
+                    <p>ينقلك إلى روم صوتي.</p>
+                </div>
+                <div class="card-action">
+                    <button class="btn-edit" onclick="alert('تعديل أمر moveme');">تعديل</button>
+                    <label class="switch" style="width: 40px; height: 22px;">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- كرت أمر profile -->
+            <div class="card">
+                <div class="card-info">
+                    <h3>/profile</h3>
+                    <p>عرض بطاقة التعريف الشخصية المخصصة لك أو لشخص آخر.</p>
+                </div>
+                <div class="card-action">
+                    <button class="btn-edit" onclick="alert('تعديل أمر profile');">تعديل</button>
+                    <label class="switch" style="width: 40px; height: 22px;">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- كرت أمر user -->
+            <div class="card">
+                <div class="card-info">
+                    <h3>/user</h3>
+                    <p>يعرض معلومات، مثل تاريخ دخول السيرفر وتاريخ التسجيل في الديسكورد عنك أو عن مستخدم آخر.</p>
+                </div>
+                <div class="card-action">
+                    <button class="btn-edit" onclick="alert('تعديل أمر user');">تعديل</button>
+                    <label class="switch" style="width: 40px; height: 22px;">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- كرت أمر avatar -->
+            <div class="card">
+                <div class="card-info">
+                    <h3>/avatar</h3>
+                    <p>الحصول على الصورة الرمزية للمستخدمين.</p>
+                </div>
+                <div class="card-action">
+                    <button class="btn-edit" onclick="alert('تعديل أمر avatar');">تعديل</button>
+                    <label class="switch" style="width: 40px; height: 22px;">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+        </div>
+
     </div>
 
-    <script>
-        function showSection(sectionId, button) {
-            const panels = document.querySelectorAll('.section-panel');
-            panels.forEach(panel => panel.classList.remove('active'));
-
-            const buttons = document.querySelectorAll('.menu-btn');
-            buttons.forEach(btn => btn.classList.remove('active'));
-
-            document.getElementById(sectionId).classList.add('active');
-            button.classList.add('active');
-            
-            document.querySelector('.main-content').scrollTop = 0;
-        }
-    </script>
 </body>
-                    </html>
-    
+</html>
