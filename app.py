@@ -57,8 +57,8 @@ async def load_cogs() -> None:
 async def main() -> None:
     """الدالة الرئيسية لإدارة الإقلاع والتشغيل المتزامن."""
     Config.validate()
-    DatabaseManager.initialize_database(app)
-    
+        await DatabaseManager.initialize_database(app)
+
     await load_cogs()
 
     hypercorn_config = HypercornConfig()
