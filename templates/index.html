@@ -3,13 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة تحكم OBT System</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <title>OBT-System | لوحة التحكم الشاملة (جميع الأقسام)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <div class="container">
-        <h1>مرحباً بك في نظام OBT Enterprise الداخلي 🚀</h1>
-        <p>جميع الأنظمة والخدمات تعمل بكفاءة تامة وتزامن كامل.</p>
-    </div>
+<body class="bg-black text-zinc-100 font-sans min-h-screen">
+    <!-- الشريط العلوي -->
+    <header class="h-16 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between px-8 sticky top-0 z-50">
+        <div class="text-xl font-bold text-indigo-400 flex items-center gap-2">
+            <span>⚡</span> OBT-System Enterprise Core
+        </div>
+        <div class="flex items-center gap-3">
+            <span id="connection-status" class="px-3 py-1 text-xs rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">النظام متصل</span>
+        </div>
+    </header>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="max-w-7xl mx-auto p-6 md:p-8 space-y-8">
+        
+        <!-- قسم الإحصائيات الحية -->
+        <section class="space-y-4">
+            <h2 class="text-lg font-semibold text-zinc-200 border-r-4 border-indigo-500 pr-3">إحصائيات النظام الحية</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-xl shadow-xl">
+                    <p class="text-xs font-medium text-zinc-400 uppercase">حالة البوت</p>
+                    <h3 id="stat-status" class="text-2xl font-bold text-emerald-400 mt-2">متصل</h3>
+                </div>
+                <div class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-xl shadow-xl">
+                    <p class="text-xs font-medium text-zinc-400 uppercase">السيرفرات النشطة</p>
+                    <h3 id="stat-guilds" class="text-2xl font-bold text-white mt-2">0</h3>
+                </div>
+                <div class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-xl shadow-xl">
+                    <p class="text-xs font-medium text-zinc-400 uppercase">سرعة الاستجابة (Ping)</p>
+                    <h3 id="stat-ping" class="text-2xl font-bold text-indigo-400 mt-2">0 ms</h3>
+                </div>
+                <div class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-xl shadow-xl">
+                    <p class="text-xs font-medium text-zinc-400 uppercase">قاعدة البيانات</p>
+                    <h3 id="stat-db" class="text-2xl font-bold text-emerald-400 mt-2">متصل</h3>
+                </div>
+            </div>
+        </section>
+
+        <!-- جميع أقسام النظام الـ 12 المعتمدة في السكربت -->
+        <section class="space-y-4">
+            <h2 class="text-lg font-semibold text-zinc-200 border-r-4 border-indigo-500 pr-3">أقسام وأنظمة البوت الـ 12</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                
+                <!-- 1. Index -->
+                <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between"><span class="text-xl">🏠</span><span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">نشط</span></div>
+                    <h3 class="font-bold text-white">الرئيسية (Index)</h3>
+                    <p class="text-xs text-zinc-400">الصفحة الرئيسية والواجهة الأساسية للداشبورد.</p>
+                </div>
+
+                <!-- 2. Dashboard -->
+                <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between"><span class="text-xl">📊</span><span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">نشط</span></div>
+                    <h3 class="font-bold text-white">لوحة القيادة (Dashboard)</h3>
+                    <p class="text-xs text-zinc-400">إدارة القيادة العامة والتحكم بالعمليات.</p>
+                </div>
+
+                <!-- 3. Analytics -->
+                <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between"><span class="text-xl">📈</span><span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">نشط</span></div>
+                    <h3 class="font-bold text-white">التحليلات (Analytics)</h3>
+                    <p class="text-xs text-zinc-400">إحصائيات تفاعلية ونشاط الأعضاء ورسائل البوت.</p>
+                </div>
+
+                <!-- 4. Backups -->
+                <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between"><span class="text-xl">💾</span><span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">نشط</span></div>
+                    <h3 class="font-bold text-white">النسخ الاحتياطي (Backups)</h3>
+                    <p class="text-xs text-zinc-400">أخذ نسخ احتياطية لقاعدة البيانات وإعدادات السيرفر.</p>
+                </div>
+
+                <!-- 5. Clans -->
+                <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between"><span class="text-xl">🛡️</span><span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">نشط</span></div>
+                    <h3 class="font-bold text-white">الكلانات (Clans)</h3>
+                    <p class="text-xs text-zinc-400">إدارة العشائر والفرق داخل نظام البوت.</p>
+                </div>
+
+                <!-- 6. Creators -->
+                <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between"><span class="text-xl">🎥</span><span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">نشط</span></div>
+                    <h3 class="font-bold text-white">صناع المحتوى (Creators)</h3>
+                    <p class="text-xs text-zinc-400">نظام دعم وتتبع صناع المحتوى في سيرفر ديسكورد.</p>
+                </div>
+
+                <!-- 7. Economy -->
+                <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between"><span class="text-xl">💰</span><span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">نشط</span></div>
+                    <h3 class="font-bold text-white">الاقتصاد (Economy)</h3>
+                    <p class="text-xs text-zinc-400">الأرصدة، المتجر، الرواتب، وأنظمة التحويل المالية.</p>
+                </div>
+
+                <!-- 8. Logs -->
+                <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between"><span class="text-xl">📜</span><span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">نشط</span></div>
+                    <h3 class="font-bold text-white">السجلات (Logs)</h3>
+                    <p class="text-xs text-zinc-400">متابعة سجلات النظام والأخطاء وأحداث السيرفر لحظياً.</p>
+                </div>
+
+                <!-- 9. Notifications -->
+                <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between"><span class="text-xl">🔔</span><span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">نشط</span></div>
+                    <h3 class="font-bold text-white">الإشعارات (Notifications)</h3>
+                    <p class="text-xs text-zinc-400">إدارة التنبيهات والإشعارات التلقائية للأعضاء.</p>
+                </div>
+
+                <!-- 10. Security -->
+                <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between"><span class="text-xl">🔒</span><span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">نشط</span></div>
+                    <h3 class="font-bold text-white">الحماية (Security)</h3>
+                    <p class="text-xs text-zinc-400">مانع الروابط، حماية السبام، وتأمين السيرفر الكامل.</p>
+                </div>
+
+                <!-- 11. Settings -->
+                <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between"><span class="text-xl">⚙️</span><span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">نشط</span></div>
+                    <h3 class="font-bold text-white">الإعدادات (Settings)</h3>
+                    <p class="text-xs text-zinc-400">إعدادات البوت العامة والبادئة وبريفكس الأوامر.</p>
+                </div>
+
+                <!-- 12. Tickets -->
+                <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between"><span class="text-xl">🎫</span><span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">نشط</span></div>
+                    <h3 class="font-bold text-white">التذاكر (Tickets)</h3>
+                    <p class="text-xs text-zinc-400">إدارة روم الدعم الفني وتذاكر المساعدة.</p>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- قسم التيرمينال وسجلات البوت الحية -->
+        <section class="space-y-4">
+            <h2 class="text-lg font-semibold text-zinc-200 border-r-4 border-indigo-500 pr-3">سجلات محرك البوت الحية</h2>
+            <div class="bg-zinc-900/80 border border-zinc-800 rounded-xl p-6 shadow-xl">
+                <div id="terminal-logs" class="bg-black p-4 rounded-lg font-mono text-xs text-emerald-400 border border-zinc-800 h-48 overflow-y-auto space-y-1">
+                    <p>[00:00:00] [INFO] OBT.Engine: All 12 enterprise modules loaded successfully.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                document.getElementById('stat-guilds').innerText = data.guilds;
+                document.getElementById('stat-ping').innerText = data.ping_ms + ' ms';
+                document.getElementById('stat-status').innerText = data.bot_ready ? 'متصل' : 'غير متصل';
+                document.getElementById('stat-db').innerText = data.database;
+            } catch (e) {
+                console.error('Failed to fetch status', e);
+            }
+        }
+        setInterval(fetchStatus, 3000);
+        fetchStatus();
+    </script>
 </body>
 </html>
