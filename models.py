@@ -11,6 +11,13 @@ from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
+# تعريف كائن db وهمي أو مبسط لتتوافق معه الـ Cogs الحالية
+class DatabaseStub:
+    def __init__(self):
+        self.Base = Base
+
+db = DatabaseStub()
+
 class EconomyUser(Base):
     __tablename__ = 'economy_users'
     
@@ -75,7 +82,7 @@ class ContentCreator(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(BigInteger, unique=True, index=True, nullable=False)
     guild_id = Column(BigInteger, index=True, nullable=False)
-    platform = Column(String(50), nullable=False) # e.g., YouTube, Twitch, TikTok
+    platform = Column(String(50), nullable=False)
     channel_url = Column(String(255), nullable=False)
     verified = Column(Boolean, default=False)
     added_at = Column(DateTime, default=datetime.datetime.utcnow)
