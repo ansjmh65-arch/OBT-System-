@@ -1,21 +1,14 @@
-from .base import db
+# -*- coding: utf-8 -*-
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 
-# استيراد كافة الجداول لضمان اكتشافها التلقائي بواسطة Alembic & SQLAlchemy
-from .settings import ServerConfig, SystemSetting, FeatureFlag, BlacklistWhitelist, RateLimit
-from .users import User, GuildMember, UserSettings, ProfileSettings, UserProfileBadge
-from .moderation import SecuritySetting, ModerationSetting, Warning, Punishment, Report, Appeal
-from .tickets import TicketSetting, TicketPanel, Ticket, TicketMessage, TicketTranscript
-from .economy import EconomySetting, EconomyUser, Item, Inventory, Transaction
-from .clans import ClanSetting, Clan, ClanMember, ClanStatistic, ClanWar, ClanLog
-from .creators import ContentCreatorSetting, ContentCreator, CreatorApplication, CreatorStatistic, CreatorPost
-from .community import (
-    WelcomeSetting, AutoRoleSetting, VerificationSetting, LevelSystem, UserLevel,
-    Giveaway, GiveawayEntry, Poll, PollOption, Suggestion, Starboard, ReactionRole,
-    TempVoiceChannel, Reminder, Birthday, CustomCommand, Tag, ScheduledEvent
-)
-from .analytics import Statistic, PerformanceMetric, BotStatistic, ErrorLog, CacheMetadata
-from .logs import LogSetting, MessageLog, VoiceLog, MemberLog, AuditLog, CommandLog
-from .dashboard import (
-    EmbedTemplate, Form, FormField, FormSubmission, Notification, WebhookSetting,
-    Backup, BackupHistory, Session, APIKey, OAuthToken, DashboardActivity
-)
+db = SQLAlchemy()
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    if dbapi_connection.__class__.__name__ == "Connection":
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+        
