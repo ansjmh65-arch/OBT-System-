@@ -1,86 +1,79 @@
-import os
-import threading
+# -*- coding: utf-8 -*-
+"""
+OBT System - Enterprise Final Unified Engine
+-------------------------------------------
+المحرك الرئيسي لتشغيل البوت ولوحة التحكم وقاعدة البيانات بتزامن كامل عبر asyncio.
+"""
+
 import asyncio
-import discord
-from discord.ext import commands
-from flask import Flask, render_template, request, redirect, url_for
-from models import db, ServerConfig
+import logging
+import os
+import sys
+from quart import Quart
+from hypercorn.asyncio import serve
+from hypercorn.config import Config as HypercornConfig
 
-# إعداد تطبيق Flask
-app = Flask(__name__, template_folder='templates')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///obt_system.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+from config import Config
+from database import db
+from database.database import DatabaseManager
+from dashboard.routes import dashboard_bp, api_bp
 
+# إعدادات التسجيل الاحترافية
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logger = logging.getLogger("OBT.App")
+
+# تهيئة تطبيق Quart
+app = Quart(__name__)
+app.config.from_object(Config)
+
+# تسجيل الـ Blueprints
+app.register_blueprint(dashboard_bp)
+app.register_blueprint(api_bp)
+
+# ربط قاعدة البيانات
 db.init_app(app)
 
-with app.app_context():
-    db.create_all()
+import discord
+from discord.ext import commands
 
-# مسارات لوحة التحكم وحفظ البيانات
-@app.route('/dashboard', methods=['GET', 'POST'])
-def dashboard_home():
-    config = ServerConfig.query.filter_by(guild_id="default_guild").first()
-    if not config:
-        config = ServerConfig(guild_id="default_guild")
-        db.session.add(config)
-        db.session.commit()
-
-    if request.method == 'POST':
-        # استقبال وتحديث حالة الأقسام من الأزرار (Checkboxes)
-        config.security_enabled = 'security_enabled' in request.form
-        config.moderation_enabled = 'moderation_enabled' in request.form
-        config.tickets_enabled = 'tickets_enabled' in request.form
-        config.clans_enabled = 'clans_enabled' in request.form
-        config.economy_enabled = 'economy_enabled' in request.form
-        config.content_creators_enabled = 'content_creators_enabled' in request.form
-        config.welcome_enabled = 'welcome_enabled' in request.form
-        config.logs_enabled = 'logs_enabled' in request.form
-        config.auto_roles_enabled = 'auto_roles_enabled' in request.form
-        config.backup_enabled = 'backup_enabled' in request.form
-        
-        # حفظ النصوص والإعدادات الأخرى إن وجدت
-        config.welcome_message = request.form.get('welcome_message', '')
-        
-        db.session.commit()
-        return redirect(url_for('dashboard_home'))
-
-    return render_template('dashboard.html', config=config)
-
-def run_flask():
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port, use_reloader=False, debug=False)
-
-def keep_alive():
-    server = threading.Thread(target=run_flask)
-    server.daemon = True
-    server.start()
-
-# إعداد بوت ديسكورد (Discord.py)
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+intents.members = True
+
+bot = commands.Bot(command_prefix=Config.BOT_PREFIX, intents=intents)
 
 @bot.event
-async def on_ready():
-    print(f"🤖 Bot Logged in as {bot.user.name}")
+async def on_ready() -> None:
+    logger.info(f"Discord Bot successfully logged in as {bot.user}")
 
-async def main():
-    keep_alive()
-    TOKEN = os.environ.get("TOKEN")
-    if not TOKEN:
-        print("❌ تحذير: التوكن غير موجود، الداشبورد ستظل تعمل ولكن البوت توقف.")
-        while True:
-            await asyncio.sleep(3600)
-    try:
-        await bot.start(TOKEN)
-    except Exception as e:
-        print(f"❌ خطأ في تشغيل البوت: {e}")
-        while True:
-            await asyncio.sleep(3600)
+async def load_cogs() -> None:
+    """تحميل الامتدادات تلقائياً."""
+    if os.path.exists("cogs"):
+        for filename in os.listdir("cogs"):
+            if filename.endswith(".py") and not filename.startswith("_"):
+                await bot.load_extension(f"cogs.{filename[:-3]}")
+                logger.info(f"Loaded Cog: cogs.{filename[:-3]}")
 
-if __name__ == '__main__':
+async def main() -> None:
+    """الدالة الرئيسية لإدارة الإقلاع والتشغيل المتزامن."""
+    Config.validate()
+    DatabaseManager.initialize_database(app)
+    
+    await load_cogs()
+
+    hypercorn_config = HypercornConfig()
+    hypercorn_config.bind = [f"0.0.0.0:{Config.PORT}"]
+    hypercorn_config.use_reloader = False
+
+    logger.info(f"Starting Hypercorn Web Server on port {Config.PORT} and Discord Bot concurrently...")
+
+    await asyncio.gather(
+        serve(app, hypercorn_config),
+        bot.start(Config.DISCORD_BOT_TOKEN)
+    )
+
+if __name__ == "__main__":
     try:
         asyncio.run(main())
-    except KeyboardInterrupt:
-        print("🛑 Shutting down...")
-        
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("OBT Enterprise System stopped cleanly.")
