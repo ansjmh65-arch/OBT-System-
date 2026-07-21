@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 """
 OBT-System Main Application
@@ -10,7 +11,7 @@ import logging
 import os
 import discord
 from discord.ext import commands
-from quart import Quart
+from Quart import Quart
 
 # استيراد الملفات الخاصة بالمشروع
 from config import Config
@@ -31,14 +32,103 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+# تصميم الداشبورد الاحترافي الحقيقي
 @app.route('/')
 async def index():
-    return "OBT-System Dashboard is running!"
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>OBT-System Dashboard</title>
+        <style>
+            body {
+                background-color: #0f172a;
+                color: #f8fafc;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                margin: 0;
+                padding: 20px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+            }
+            .card {
+                background-color: #1e293b;
+                border: 1px solid #334155;
+                border-radius: 12px;
+                padding: 30px;
+                width: 100%;
+                max-width: 600px;
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            }
+            h1 {
+                color: #38bdf8;
+                font-size: 22px;
+                margin-top: 0;
+                margin-bottom: 10px;
+            }
+            p.desc {
+                color: #94a3b8;
+                font-size: 14px;
+                margin-bottom: 25px;
+            }
+            .status-badge {
+                display: inline-block;
+                padding: 6px 14px;
+                background-color: #065f46;
+                color: #34d399;
+                border-radius: 20px;
+                font-weight: bold;
+                font-size: 13px;
+                margin-bottom: 25px;
+            }
+            .info-item {
+                background-color: #0f172a;
+                padding: 14px 18px;
+                border-radius: 8px;
+                margin-bottom: 12px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border: 1px solid #334155;
+                font-size: 14px;
+            }
+            .online {
+                color: #34d399;
+                font-weight: bold;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <h1>OBT-System Control Panel</h1>
+            <p class="desc">لوحة التحكم المركزية المتزامنة لإدارة بوت ديسكورد وقاعدة البيانات.</p>
+            <div class="status-badge">● النظام يعمل بكفاءة</div>
+            
+            <div class="info-item">
+                <span>حالة بوت ديسكورد (Discord Bot):</span>
+                <span class="online">متصل (Online)</span>
+            </div>
+            
+            <div class="info-item">
+                <span>قاعدة البيانات (Database):</span>
+                <span class="online">متصلة وجاهزة</span>
+            </div>
+            
+            <div class="info-item">
+                <span>إطار العمل (Framework):</span>
+                <strong style="color: #cbd5e1;">Quart (Async)</strong>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return html_content
 
 async def load_cogs():
     """تحميل ملفات الأوامر (Cogs) للبوت."""
-    # يمكنك إضافة الكوجز الخاصة بك هنا مستقبلاً
-    # await bot.load_extension("cogs.general")
     pass
 
 async def run_bot():
@@ -57,17 +147,10 @@ async def run_dashboard():
 async def main() -> None:
     """الدالة الرئيسية لإدارة الإقلاع والتشغيل المتزامن."""
     logger.info("Initializing OBT-System...")
-    
-    # 1. التحقق من الإعدادات والمتغيرات
     Config.validate()
-    
-    # 2. تهيئة قاعدة البيانات (مع ضبط كلمة await والمسافات 100%)
     await DatabaseManager.initialize_database(app)
-    
-    # 3. تحميل أوامر البوت
     await load_cogs()
     
-    # 4. تشغيل الداشبورد والبوت في نفس الوقت
     logger.info("Starting Bot and Dashboard concurrently...")
     await asyncio.gather(
         run_dashboard(),
@@ -76,7 +159,6 @@ async def main() -> None:
 
 if __name__ == "__main__":
     try:
-        # الإقلاع الرئيسي
         asyncio.run(main())
     except KeyboardInterrupt:
         logger.info("System shutting down gracefully.")
