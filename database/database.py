@@ -1,14 +1,13 @@
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import event
-from sqlalchemy.engine import Engine
+# -*- coding: utf-8 -*-
+import logging
+from . import db
 
-db = SQLAlchemy()
+logger = logging.getLogger("OBT.Database")
 
-# تفعيل التحقق من قيود المفاتيح الأجنبية خصيصاً لـ SQLite
-@event.listens_for(Engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    if dbapi_connection.__class__.__name__ == "Connection": # تأكد أنه اتصال SQLite
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-        
+class DatabaseManager:
+    @staticmethod
+    def initialize_database(app) -> None:
+        with app.app_context():
+            db.create_all()
+            logger.info("Database schemas initialized and verified successfully.")
+            
