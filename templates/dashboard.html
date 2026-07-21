@@ -9,7 +9,6 @@
             --bg-main: #313338;
             --bg-sidebar: #2b2d31;
             --bg-card: #232428;
-            --bg-card-hover: #2b2d31;
             --accent: #5865f2;
             --accent-hover: #4752c4;
             --text-main: #f2f3f5;
@@ -33,7 +32,7 @@
             overflow: hidden;
         }
 
-        /* القائمة الجانبية (Sidebar) */
+        /* القائمة الجانبية */
         .sidebar {
             width: 280px;
             background-color: var(--bg-sidebar);
@@ -52,7 +51,18 @@
             color: var(--text-main);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+        }
+
+        .bot-logo {
+            width: 32px;
+            height: 32px;
+            background-color: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
         }
 
         .menu-category {
@@ -87,7 +97,6 @@
             gap: 10px;
         }
 
-        /* علامة التفعيل الخضراء بجانب الأقسام */
         .status-dot {
             width: 8px;
             height: 8px;
@@ -125,7 +134,7 @@
             font-size: 0.9rem;
         }
 
-        /* زر التفعيل العام للقسم (Switch) */
+        /* أزرار التفعيل (Switch) */
         .switch {
             position: relative;
             display: inline-block;
@@ -168,7 +177,7 @@
             transform: translateX(24px);
         }
 
-        /* الكروت الداخلية */
+        /* الكروت */
         .cards-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -222,7 +231,6 @@
             background-color: #35373c;
         }
 
-        /* التجاوب مع الجوال */
         @media (max-width: 768px) {
             body {
                 flex-direction: column;
@@ -241,135 +249,11 @@
 </head>
 <body>
 
-    <!-- القائمة الجانبية (Sidebar) مطابقة لـ ProBot -->
+    <!-- القائمة الجانبية باسم بوتك OBT-System -->
     <div class="sidebar">
         <div class="sidebar-header">
-            <span>🤖</span> OBT || OBOX
-        </div>
-
-        <div class="menu-category">عام</div>
-        <a href="#" class="menu-item">
-            <div class="menu-item-content"><span>⚙️</span> إعدادات السيرفر</div>
-        </a>
-        <a href="#" class="menu-item">
-            <div class="menu-item-content"><span>📜</span> رسائل الپريميوم</div>
-        </a>
-
-        <div class="menu-category">قائمة الخصائص</div>
-        <a href="#" class="menu-item active">
-            <div class="menu-item-content"><span>⚡</span> الأوامر العامة</div>
-            <div class="status-dot"></div>
-        </a>
-        <a href="#" class="menu-item">
-            <div class="menu-item-content"><span>👋</span> الترحيب & المغادرة</div>
-            <div class="status-dot"></div>
-        </a>
-        <a href="#" class="menu-item">
-            <div class="menu-item-content"><span>💬</span> الرد التلقائي</div>
-            <div class="status-dot"></div>
-        </a>
-        <a href="#" class="menu-item">
-            <div class="menu-item-content"><span>🛡️</span> الإشراف</div>
-            <div class="status-dot"></div>
-        </a>
-        <a href="#" class="menu-item">
-            <div class="menu-item-content"><span>👁️</span> الرقابة التلقائية</div>
-            <div class="status-dot"></div>
-        </a>
-        <a href="#" class="menu-item">
-            <div class="menu-item-content"><span>📋</span> اللوق</div>
-            <div class="status-dot"></div>
-        </a>
-    </div>
-
-    <!-- المحتوى الرئيسي (Main Content) -->
-    <div class="main-content">
-        
-        <!-- رأس القسم الحالي مع زر التفعيل -->
-        <div class="section-header">
-            <div class="section-title">
-                <h1>الأوامر العامة</h1>
-                <p>تحكم بأوامر البوت العامة المتوفرة لأعضاء السيرفر</p>
-            </div>
-            <label class="switch">
-                <input type="checkbox" checked>
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <!-- شبكة الكروت (الأوامر والخيارات) -->
-        <div class="cards-grid">
-            
-            <!-- كرت أمر moveme -->
-            <div class="card">
-                <div class="card-info">
-                    <h3>/moveme</h3>
-                    <p>ينقلك إلى روم صوتي.</p>
-                </div>
-                <div class="card-action">
-                    <button class="btn-edit" onclick="alert('تعديل أمر moveme');">تعديل</button>
-                    <label class="switch" style="width: 40px; height: 22px;">
-                        <input type="checkbox" checked>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- كرت أمر profile -->
-            <div class="card">
-                <div class="card-info">
-                    <h3>/profile</h3>
-                    <p>عرض بطاقة التعريف الشخصية المخصصة لك أو لشخص آخر.</p>
-                </div>
-                <div class="card-action">
-                    <button class="btn-edit" onclick="alert('تعديل أمر profile');">تعديل</button>
-                    <label class="switch" style="width: 40px; height: 22px;">
-                        <input type="checkbox" checked>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- كرت أمر user -->
-            <div class="card">
-                <div class="card-info">
-                    <h3>/user</h3>
-                    <p>يعرض معلومات، مثل تاريخ دخول السيرفر وتاريخ التسجيل في الديسكورد عنك أو عن مستخدم آخر.</p>
-                </div>
-                <div class="card-action">
-                    <button class="btn-edit" onclick="alert('تعديل أمر user');">تعديل</button>
-                    <label class="switch" style="width: 40px; height: 22px;">
-                        <input type="checkbox" checked>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- كرت أمر avatar -->
-            <div class="card">
-                <div class="card-info">
-                    <h3>/avatar</h3>
-                    <p>الحصول على الصورة الرمزية للمستخدمين.</p>
-                </div>
-                <div class="card-action">
-                    <button class="btn-edit" onclick="alert('تعديل أمر avatar');">تعديل</button>
-                    <label class="switch" style="width: 40px; height: 22px;">
-                        <input type="checkbox" checked>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-
-        </div>
-
-    </div>
-
-</body>
-</html>
-    <!-- القائمة الجانبية (Sidebar) مطابقة لـ ProBot -->
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <span>🤖</span> OBT || OBOX
+            <div class="bot-logo">🤖</div>
+            <span>OBT-System</span>
         </div>
 
         <div class="menu-category">عام</div>
@@ -393,9 +277,88 @@
             <div class="menu-item-content"><span>🎫</span> التذاكر</div>
             <div class="status-dot"></div>
         </a>
-        <a href="/dashboard/analytics" class="menu-item">
-            <div class="menu-item-content"><span>📊</span> الإحصائيات</div>
+        <a href="/dashboard/moderation" class="menu-item">
+            <div class="menu-item-content"><span>🛡️</span> الإشراف</div>
             <div class="status-dot"></div>
         </a>
     </div>
-    
+
+    <!-- المحتوى الرئيسي -->
+    <div class="main-content">
+        
+        <div class="section-header">
+            <div class="section-title">
+                <h1>الأوامر العامة</h1>
+                <p>لوحة التحكم الخاصة بـ OBT-System لإدارة الأوامر والخصائص</p>
+            </div>
+            <label class="switch">
+                <input type="checkbox" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="cards-grid">
+            
+            <div class="card">
+                <div class="card-info">
+                    <h3>/moveme</h3>
+                    <p>ينقلك إلى روم صوتي.</p>
+                </div>
+                <div class="card-action">
+                    <button class="btn-edit" onclick="alert('تعديل أمر moveme');">تعديل</button>
+                    <label class="switch" style="width: 40px; height: 22px;">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-info">
+                    <h3>/profile</h3>
+                    <p>عرض بطاقة التعريف الشخصية المخصصة لك أو لشخص آخر.</p>
+                </div>
+                <div class="card-action">
+                    <button class="btn-edit" onclick="alert('تعديل أمر profile');">تعديل</button>
+                    <label class="switch" style="width: 40px; height: 22px;">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-info">
+                    <h3>/user</h3>
+                    <p>يعرض معلومات، مثل تاريخ دخول السيرفر وتاريخ التسجيل في الديسكورد.</p>
+                </div>
+                <div class="card-action">
+                    <button class="btn-edit" onclick="alert('تعديل أمر user');">تعديل</button>
+                    <label class="switch" style="width: 40px; height: 22px;">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-info">
+                    <h3>/avatar</h3>
+                    <p>الحصول على الصورة الرمزية للمستخدمين.</p>
+                </div>
+                <div class="card-action">
+                    <button class="btn-edit" onclick="alert('تعديل أمر avatar');">تعديل</button>
+                    <label class="switch" style="width: 40px; height: 22px;">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</body>
+                </html>
+                
