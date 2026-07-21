@@ -119,4 +119,11 @@ if __name__ == '__main__':
 def dashboard():
     # يمكنك تمرير اسم السيرفر والأيدي الحقيقيين هنا لاحقاً
     return render_template('dashboard.html', guild_name="OBT System", guild_id="123456789")
-                                  
+from flask import Flask, render_template, redirect
+
+# (تأكد أن تعريف app موجود لديك مسبقاً مثل: app = Flask(__name__))
+
+@app.route('/dashboard')
+def dashboard_page():
+    return render_template('dashboard.html', guild_name="OBT System", guild_id="123456789")
+    
