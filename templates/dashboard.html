@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OBT-System | لوحة التحكم</title>
+    <title>OBT-System | لوحة التحكم الشاملة</title>
     <style>
         :root {
             --bg-main: #313338;
             --bg-sidebar: #2b2d31;
             --bg-card: #232428;
             --accent: #5865f2;
-            --accent-hover: #4752c4;
             --text-main: #f2f3f5;
             --text-muted: #949ba4;
             --border: #1f2023;
@@ -22,6 +21,8 @@
             margin: 0;
             padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            direction: rtl;
+            text-align: right;
         }
 
         body {
@@ -32,7 +33,6 @@
             overflow: hidden;
         }
 
-        /* القائمة الجانبية */
         .sidebar {
             width: 280px;
             background-color: var(--bg-sidebar);
@@ -41,6 +41,7 @@
             flex-direction: column;
             height: 100%;
             overflow-y: auto;
+            flex-shrink: 0;
         }
 
         .sidebar-header {
@@ -48,7 +49,6 @@
             font-size: 1.1rem;
             font-weight: bold;
             border-bottom: 1px solid var(--border);
-            color: var(--text-main);
             display: flex;
             align-items: center;
             gap: 12px;
@@ -62,7 +62,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1rem;
         }
 
         .menu-category {
@@ -71,7 +70,6 @@
             color: var(--text-muted);
             text-transform: uppercase;
             font-weight: bold;
-            letter-spacing: 0.5px;
         }
 
         .menu-item {
@@ -82,7 +80,6 @@
             color: var(--text-muted);
             text-decoration: none;
             transition: 0.2s;
-            cursor: pointer;
             font-size: 0.9rem;
         }
 
@@ -97,14 +94,6 @@
             gap: 10px;
         }
 
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background-color: var(--success);
-            border-radius: 50%;
-        }
-
-        /* المحتوى الرئيسي */
         .main-content {
             flex: 1;
             padding: 30px;
@@ -134,53 +123,9 @@
             font-size: 0.9rem;
         }
 
-        /* أزرار التفعيل (Switch) */
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 26px;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #4e5058;
-            transition: .3s;
-            border-radius: 26px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .3s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: var(--success);
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(24px);
-        }
-
-        /* الكروت */
         .cards-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 15px;
         }
 
@@ -199,6 +144,8 @@
             font-size: 1.1rem;
             margin-bottom: 5px;
             color: var(--text-main);
+            direction: ltr;
+            text-align: right;
         }
 
         .card-info p {
@@ -224,32 +171,51 @@
             cursor: pointer;
             font-weight: 600;
             font-size: 0.85rem;
-            transition: 0.2s;
         }
 
-        .btn-edit:hover {
-            background-color: #35373c;
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
         }
+
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #4e5058;
+            transition: .3s;
+            border-radius: 22px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            right: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider { background-color: var(--success); }
+        input:checked + .slider:before { transform: translateX(-18px); }
 
         @media (max-width: 768px) {
-            body {
-                flex-direction: column;
-                overflow: auto;
-            }
-            .sidebar {
-                width: 100%;
-                height: auto;
-                max-height: 250px;
-            }
-            .main-content {
-                overflow: visible;
-            }
+            body { flex-direction: column; overflow: auto; height: auto; }
+            .sidebar { width: 100%; height: auto; border-left: none; border-bottom: 1px solid var(--border); }
+            .main-content { overflow: visible; padding: 15px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- القائمة الجانبية باسم بوتك OBT-System -->
+    <!-- القائمة الجانبية الكاملة لكل الأقسام -->
     <div class="sidebar">
         <div class="sidebar-header">
             <div class="bot-logo">🤖</div>
@@ -261,39 +227,38 @@
             <div class="menu-item-content"><span>⚙️</span> إعدادات السيرفر</div>
         </a>
         <a href="/dashboard/logs" class="menu-item">
-            <div class="menu-item-content"><span>📋</span> اللوق</div>
+            <div class="menu-item-content"><span>📋</span> سجلات اللوق</div>
         </a>
 
-        <div class="menu-category">قائمة الخصائص</div>
+        <div class="menu-category">الأقسام والأوامر</div>
         <a href="/dashboard" class="menu-item active">
             <div class="menu-item-content"><span>⚡</span> الأوامر العامة</div>
-            <div class="status-dot"></div>
         </a>
         <a href="/dashboard/economy" class="menu-item">
-            <div class="menu-item-content"><span>💰</span> الاقتصاد</div>
-            <div class="status-dot"></div>
+            <div class="menu-item-content"><span>💰</span> قسم الاقتصاد</div>
         </a>
         <a href="/dashboard/tickets" class="menu-item">
-            <div class="menu-item-content"><span>🎫</span> التذاكر</div>
-            <div class="status-dot"></div>
+            <div class="menu-item-content"><span>🎫</span> قسم التذاكر</div>
         </a>
         <a href="/dashboard/moderation" class="menu-item">
-            <div class="menu-item-content"><span>🛡️</span> الإشراف</div>
-            <div class="status-dot"></div>
+            <div class="menu-item-content"><span>🛡️</span> الإشراف والحماية</div>
+        </a>
+        <a href="/dashboard/analytics" class="menu-item">
+            <div class="menu-item-content"><span>📊</span> الإحصائيات</div>
         </a>
     </div>
 
-    <!-- المحتوى الرئيسي -->
+    <!-- المحتوى الرئيسي (الأوامر والتحكم الكامل) -->
     <div class="main-content">
         
         <div class="section-header">
             <div class="section-title">
-                <h1>الأوامر العامة</h1>
-                <p>لوحة التحكم الخاصة بـ OBT-System لإدارة الأوامر والخصائص</p>
+                <h1>لوحة تحكم الأوامر والخصائص</h1>
+                <p>تحكم كامل بجميع أقسام وأوامر بوت OBT-System</p>
             </div>
-            <label class="switch">
+            <label class="switch" style="width: 50px; height: 26px;">
                 <input type="checkbox" checked>
-                <span class="slider"></span>
+                <span class="slider" style="border-radius: 26px;"></span>
             </label>
         </div>
 
@@ -302,56 +267,66 @@
             <div class="card">
                 <div class="card-info">
                     <h3>/moveme</h3>
-                    <p>ينقلك إلى روم صوتي.</p>
+                    <p>أمر نقل الأعضاء إلى الغرف الصوتية.</p>
                 </div>
                 <div class="card-action">
-                    <button class="btn-edit" onclick="alert('تعديل أمر moveme');">تعديل</button>
-                    <label class="switch" style="width: 40px; height: 22px;">
-                        <input type="checkbox" checked>
-                        <span class="slider"></span>
-                    </label>
+                    <button class="btn-edit">تعديل</button>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
                 </div>
             </div>
 
             <div class="card">
                 <div class="card-info">
                     <h3>/profile</h3>
-                    <p>عرض بطاقة التعريف الشخصية المخصصة لك أو لشخص آخر.</p>
+                    <p>عرض الملف الشخصي وبطاقة التعريف للمستخدم.</p>
                 </div>
                 <div class="card-action">
-                    <button class="btn-edit" onclick="alert('تعديل أمر profile');">تعديل</button>
-                    <label class="switch" style="width: 40px; height: 22px;">
-                        <input type="checkbox" checked>
-                        <span class="slider"></span>
-                    </label>
+                    <button class="btn-edit">تعديل</button>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
                 </div>
             </div>
 
             <div class="card">
                 <div class="card-info">
                     <h3>/user</h3>
-                    <p>يعرض معلومات، مثل تاريخ دخول السيرفر وتاريخ التسجيل في الديسكورد.</p>
+                    <p>عرض تفاصيل ومعلومات حساب ديسكورد وسيرفر الأعضاء.</p>
                 </div>
                 <div class="card-action">
-                    <button class="btn-edit" onclick="alert('تعديل أمر user');">تعديل</button>
-                    <label class="switch" style="width: 40px; height: 22px;">
-                        <input type="checkbox" checked>
-                        <span class="slider"></span>
-                    </label>
+                    <button class="btn-edit">تعديل</button>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
                 </div>
             </div>
 
             <div class="card">
                 <div class="card-info">
                     <h3>/avatar</h3>
-                    <p>الحصول على الصورة الرمزية للمستخدمين.</p>
+                    <p>سحب الصورة الشخصية (الرمزية) للأعضاء.</p>
                 </div>
                 <div class="card-action">
-                    <button class="btn-edit" onclick="alert('تعديل أمر avatar');">تعديل</button>
-                    <label class="switch" style="width: 40px; height: 22px;">
-                        <input type="checkbox" checked>
-                        <span class="slider"></span>
-                    </label>
+                    <button class="btn-edit">تعديل</button>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-info">
+                    <h3>/bank /daily</h3>
+                    <p>أوامر النظام الاقتصادي والأموال والتحويل.</p>
+                </div>
+                <div class="card-action">
+                    <button class="btn-edit">تعديل</button>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-info">
+                    <h3>/ticket-setup</h3>
+                    <p>إدارة تذاكر الدعم الفني وفتح الرومات الخاصة.</p>
+                </div>
+                <div class="card-action">
+                    <button class="btn-edit">تعديل</button>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
                 </div>
             </div>
 
@@ -360,5 +335,5 @@
     </div>
 
 </body>
-                </html>
-                
+    </html>
+    
