@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 """
 OBT-System Main Application
@@ -11,7 +10,7 @@ import logging
 import os
 import discord
 from discord.ext import commands
-from Quart import Quart
+from quart import Quart  # تم تصحيح الحرف الصغير هنا
 
 # استيراد الملفات الخاصة بالمشروع
 from config import Config
