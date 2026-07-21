@@ -126,4 +126,35 @@ from flask import Flask, render_template, redirect
 @app.route('/dashboard')
 def dashboard_page():
     return render_template('dashboard.html', guild_name="OBT System", guild_id="123456789")
-    
+    from flask import render_template
+
+# مسار الصفحة الرئيسية للداشبورد (الأوامر العامة)
+@app.route('/dashboard')
+def dashboard():
+    return render_template('dashboard.html')
+
+# مسارات بقية الأقسام بناءً على ملفات الـ html الموجودة عندك
+@app.route('/dashboard/analytics')
+def dashboard_analytics():
+    return render_template('analytics.html')
+
+@app.route('/dashboard/economy')
+def dashboard_economy():
+    return render_template('economy.html')
+
+@app.route('/dashboard/moderation')
+def dashboard_moderation():
+    return render_template('moderation.html')
+
+@app.route('/dashboard/tickets')
+def dashboard_tickets():
+    return render_template('tickets.html')
+
+@app.route('/dashboard/logs')
+def dashboard_logs():
+    return render_template('logs.html')
+
+@app.route('/dashboard/settings')
+def dashboard_settings():
+    return render_template('settings.html')
+                                  
