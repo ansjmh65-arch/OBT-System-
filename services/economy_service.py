@@ -1,24 +1,28 @@
-from models import EconomyUser
-from database.database import db
+# -*- coding: utf-8 -*-
+import logging
+from database.models import EconomyModel
+from database import db
+
+logger = logging.getLogger("OBT.Services")
 
 class EconomyService:
     @staticmethod
-    def get_balance(user_id: int, guild_id: int):
-        user = EconomyUser.query.filter_by(user_id=user_id, guild_id=guild_id).first()
-        if not user:
-            user = EconomyUser(user_id=user_id, guild_id=guild_id, balance=1000)
-            db.session.add(user)
+    def get_balance(guild_id: str, user_id: str) -> int:
+        account = EconomyModel.query.filter_by(guild_id=guild_id, user_id=user_id).first()
+        if not account:
+            account = EconomyModel(guild_id=guild_id, user_id=user_id, balance=100, bank=0)
+            db.session.add(account)
             db.session.commit()
-        return user.balance
+        return account.balance
 
     @staticmethod
-    def update_balance(user_id: int, guild_id: int, amount: int):
-        user = EconomyUser.query.filter_by(user_id=user_id, guild_id=guild_id).first()
-        if not user:
-            user = EconomyUser(user_id=user_id, guild_id=guild_id, balance=1000 + amount)
-            db.session.add(user)
+    def add_balance(guild_id: str, user_id: str, amount: int) -> int:
+        account = EconomyModel.query.filter_by(guild_id=guild_id, user_id=user_id).first()
+        if not account:
+            account = EconomyModel(guild_id=guild_id, user_id=user_id, balance=100 + amount, bank=0)
+            db.session.add(account)
         else:
-            user.balance += amount
+            account.balance += amount
         db.session.commit()
-        return user.balance
-      
+        return account.balance
+        
