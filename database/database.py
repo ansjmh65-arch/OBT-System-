@@ -14,10 +14,10 @@ class DatabaseManager:
     """مدير قاعدة البيانات المتوافق مع Quart."""
 
     @staticmethod
-    def initialize_database(app) -> None:
-        """إنشاء الجداول باستخدام سياق تطبيق Quart المتزامن بشكل صحيح."""
+    async def initialize_database(app) -> None:
+        """إنشاء الجداول باستخدام سياق تطبيق Quart غير المتزامن."""
         try:
-            with app.app_context():
+            async with app.app_context():
                 db.create_all()
             logger.info("Database schemas initialized and verified successfully.")
         except Exception as e:
