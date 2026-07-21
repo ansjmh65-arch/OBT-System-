@@ -218,9 +218,9 @@ async def main() -> None:
         return
 
     try:
-        # ربط Quart بحدث الإغلاق (shutdown_trigger) لضمان عدم التعليق عند الإيقاف
+        # تم إزالة use_reloader الغير مدعومة في Quart لتجنب الـ TypeError
         await asyncio.gather(
-            app.run_task(host="0.0.0.0", port=port, use_reloader=False, shutdown_trigger=shutdown_event.wait),
+            app.run_task(host="0.0.0.0", port=port, shutdown_trigger=shutdown_event.wait),
             bot.start(bot_token)
         )
     except asyncio.CancelledError:
@@ -235,4 +235,3 @@ if __name__ == "__main__":
         pass
     except Exception as e:
         logger.critical(f"Fatal application error: {e}", exc_info=True)
-                                                                            
