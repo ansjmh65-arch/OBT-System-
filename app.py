@@ -1,79 +1,85 @@
 # -*- coding: utf-8 -*-
 """
-OBT System - Enterprise Final Unified Engine
--------------------------------------------
-المحرك الرئيسي لتشغيل البوت ولوحة التحكم وقاعدة البيانات بتزامن كامل عبر asyncio.
+OBT-System Main Application
+---------------------------
+نقطة الإدخال الرئيسية لتشغيل البوت ولوحة التحكم معاً.
 """
 
 import asyncio
 import logging
 import os
-import sys
-from quart import Quart
-from hypercorn.asyncio import serve
-from hypercorn.config import Config as HypercornConfig
-
-from config import Config
-from database import db
-from database.database import DatabaseManager
-from dashboard.routes import dashboard_bp, api_bp
-
-# إعدادات التسجيل الاحترافية
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
-logger = logging.getLogger("OBT.App")
-
-# تهيئة تطبيق Quart
-app = Quart(__name__)
-app.config.from_object(Config)
-
-# تسجيل الـ Blueprints
-app.register_blueprint(dashboard_bp)
-app.register_blueprint(api_bp)
-
-# ربط قاعدة البيانات
-db.init_app(app)
-
 import discord
 from discord.ext import commands
+from quart import Quart
 
+# استيراد الملفات الخاصة بالمشروع
+from config import Config
+from database.database import DatabaseManager
+
+# إعداد سجلات النظام
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+logger = logging.getLogger("OBT.Main")
+
+# تهيئة تطبيق Quart للوحة التحكم
+app = Quart(__name__)
+
+# تهيئة بوت ديسكورد
 intents = discord.Intents.default()
 intents.message_content = True
-intents.members = True
+bot = commands.Bot(command_prefix="!", intents=intents)
 
-bot = commands.Bot(command_prefix=Config.BOT_PREFIX, intents=intents)
+@app.route('/')
+async def index():
+    return "OBT-System Dashboard is running!"
 
-@bot.event
-async def on_ready() -> None:
-    logger.info(f"Discord Bot successfully logged in as {bot.user}")
+async def load_cogs():
+    """تحميل ملفات الأوامر (Cogs) للبوت."""
+    # يمكنك إضافة الكوجز الخاصة بك هنا مستقبلاً
+    # await bot.load_extension("cogs.general")
+    pass
 
-async def load_cogs() -> None:
-    """تحميل الامتدادات تلقائياً."""
-    if os.path.exists("cogs"):
-        for filename in os.listdir("cogs"):
-            if filename.endswith(".py") and not filename.startswith("_"):
-                await bot.load_extension(f"cogs.{filename[:-3]}")
-                logger.info(f"Loaded Cog: cogs.{filename[:-3]}")
+async def run_bot():
+    """مهمة تشغيل البوت."""
+    token = os.environ.get("DISCORD_BOT_TOKEN")
+    if not token:
+        logger.error("Discord Token is missing!")
+        return
+    await bot.start(token)
+
+async def run_dashboard():
+    """مهمة تشغيل لوحة التحكم (Quart)."""
+    port = int(os.environ.get("PORT", 8080))
+    await app.run_task(host="0.0.0.0", port=port)
 
 async def main() -> None:
     """الدالة الرئيسية لإدارة الإقلاع والتشغيل المتزامن."""
+    logger.info("Initializing OBT-System...")
+    
+    # 1. التحقق من الإعدادات والمتغيرات
     Config.validate()
-        await DatabaseManager.initialize_database(app)
-
+    
+    # 2. تهيئة قاعدة البيانات (مع ضبط كلمة await والمسافات 100%)
+    await DatabaseManager.initialize_database(app)
+    
+    # 3. تحميل أوامر البوت
     await load_cogs()
-
-    hypercorn_config = HypercornConfig()
-    hypercorn_config.bind = [f"0.0.0.0:{Config.PORT}"]
-    hypercorn_config.use_reloader = False
-
-    logger.info(f"Starting Hypercorn Web Server on port {Config.PORT} and Discord Bot concurrently...")
-
+    
+    # 4. تشغيل الداشبورد والبوت في نفس الوقت
+    logger.info("Starting Bot and Dashboard concurrently...")
     await asyncio.gather(
-        serve(app, hypercorn_config),
-        bot.start(Config.DISCORD_BOT_TOKEN)
+        run_dashboard(),
+        run_bot()
     )
 
 if __name__ == "__main__":
     try:
+        # الإقلاع الرئيسي
         asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        logger.info("OBT Enterprise System stopped cleanly.")
+    except KeyboardInterrupt:
+        logger.info("System shutting down gracefully.")
+    except Exception as e:
+        logger.error(f"Fatal error: {e}")
+        
