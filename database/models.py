@@ -903,3 +903,312 @@ class ClanRewardModel(db.Model):
         default=datetime.utcnow,
         nullable=False
     )
+# ==========================
+# Economy & Level System Models
+# ==========================
+
+
+class EconomyModel(db.Model):
+    __tablename__ = "economy"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    user_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+
+    balance = db.Column(
+        db.Integer,
+        default=0,
+        nullable=False
+    )
+
+
+    bank = db.Column(
+        db.Integer,
+        default=0,
+        nullable=False
+    )
+
+
+    daily_claimed = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False
+    )
+
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "guild_id",
+            "user_id",
+            name="economy_guild_user_unique"
+        ),
+    )
+
+
+
+class TransactionModel(db.Model):
+    __tablename__ = "economy_transactions"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+
+    user_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+
+    amount = db.Column(
+        db.Integer,
+        nullable=False
+    )
+
+
+    transaction_type = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+
+    reason = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+
+
+class LevelSettingsModel(db.Model):
+    __tablename__ = "level_settings"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+
+    guild_id = db.Column(
+        db.String(32),
+        unique=True,
+        nullable=False
+    )
+
+
+    enabled = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+
+    xp_per_message = db.Column(
+        db.Integer,
+        default=10,
+        nullable=False
+    )
+
+
+    cooldown = db.Column(
+        db.Integer,
+        default=60,
+        nullable=False
+    )
+
+
+    level_up_channel = db.Column(
+        db.String(32),
+        nullable=True
+    )
+
+
+    level_up_message = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+
+
+class UserLevelModel(db.Model):
+    __tablename__ = "user_levels"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+
+    user_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+
+    xp = db.Column(
+        db.Integer,
+        default=0,
+        nullable=False
+    )
+
+
+    level = db.Column(
+        db.Integer,
+        default=1,
+        nullable=False
+    )
+
+
+    messages = db.Column(
+        db.Integer,
+        default=0,
+        nullable=False
+    )
+
+
+    last_message = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "guild_id",
+            "user_id",
+            name="level_user_unique"
+        ),
+    )
+
+
+
+class LevelRewardModel(db.Model):
+    __tablename__ = "level_rewards"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+
+    level = db.Column(
+        db.Integer,
+        nullable=False
+    )
+
+
+    role_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+
+
+class LeaderboardModel(db.Model):
+    __tablename__ = "leaderboards"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+
+    user_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+
+    category = db.Column(
+        db.String(30),
+        nullable=False
+    )
+
+
+    value = db.Column(
+        db.Integer,
+        default=0,
+        nullable=False
+    )
+
+
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
