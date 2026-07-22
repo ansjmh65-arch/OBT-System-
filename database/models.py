@@ -1512,3 +1512,207 @@ class CommandUsageLogModel(db.Model):
         default=datetime.utcnow,
         nullable=False
     )
+# ==========================
+# Moderation System Models
+# ==========================
+
+
+class ModerationSettingsModel(db.Model):
+    __tablename__ = "moderation_settings"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    warn_enabled = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    mute_enabled = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    kick_enabled = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    ban_enabled = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    auto_punishment = db.Column(
+        db.Boolean,
+        default=False,
+        nullable=False
+    )
+
+    max_warnings = db.Column(
+        db.Integer,
+        default=3,
+        nullable=False
+    )
+
+    punishment_after_limit = db.Column(
+        db.String(30),
+        default="mute",
+        nullable=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+
+
+class WarningModel(db.Model):
+    __tablename__ = "warnings"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    user_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    moderator_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+    reason = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    status = db.Column(
+        db.String(20),
+        default="active",
+        nullable=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+
+
+class PunishmentModel(db.Model):
+    __tablename__ = "punishments"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    user_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+    moderator_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+    punishment_type = db.Column(
+        db.String(30),
+        nullable=False
+    )
+
+    reason = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    duration = db.Column(
+        db.Integer,
+        nullable=True
+    )
+
+    expires_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+
+
+class ModerationLogModel(db.Model):
+    __tablename__ = "moderation_logs"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+    moderator_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+    target_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+    action = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+    reason = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
