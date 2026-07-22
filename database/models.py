@@ -2426,3 +2426,117 @@ class RestoreHistoryModel(db.Model):
         db.DateTime,
         default=datetime.utcnow
     )
+# ==========================
+# Backup System Models
+# ==========================
+
+
+class BackupModel(db.Model):
+    __tablename__ = "server_backups"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    backup_id = db.Column(
+        db.String(100),
+        unique=True,
+        nullable=False
+    )
+
+    name = db.Column(
+        db.String(100),
+        default="Server Backup",
+        nullable=False
+    )
+
+    created_by = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+
+    # حالة النسخة
+    status = db.Column(
+        db.String(20),
+        default="completed",
+        nullable=False
+    )
+
+
+    # البيانات الكاملة
+    data = db.Column(
+        db.Text,
+        nullable=False
+    )
+
+
+    size = db.Column(
+        db.Integer,
+        default=0,
+        nullable=False
+    )
+
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+
+
+class BackupRestoreLogModel(db.Model):
+    __tablename__ = "backup_restore_logs"
+
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+
+    backup_id = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+
+    restored_by = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+
+    status = db.Column(
+        db.String(20),
+        default="success",
+        nullable=False
+    )
+
+
+    details = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
