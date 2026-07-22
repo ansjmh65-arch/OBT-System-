@@ -2540,3 +2540,83 @@ class BackupRestoreLogModel(db.Model):
         default=datetime.utcnow,
         nullable=False
     )
+class CreatorSettingsModel(db.Model):
+    __tablename__ = "creator_settings"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        unique=True,
+        nullable=False
+    )
+
+    enabled = db.Column(
+        db.Boolean,
+        default=True
+    )
+
+    application_channel = db.Column(
+        db.String(32),
+        nullable=True
+    )
+
+    creator_role_id = db.Column(
+        db.String(32),
+        nullable=True
+    )
+
+
+
+class ContentCreatorModel(db.Model):
+    __tablename__ = "content_creators"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    user_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    platform = db.Column(
+        db.String(30),
+        nullable=False
+    )
+
+    username = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    followers = db.Column(
+        db.Integer,
+        default=0
+    )
+
+    level = db.Column(
+        db.String(50),
+        default="Creator"
+    )
+
+    verified = db.Column(
+        db.Boolean,
+        default=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
