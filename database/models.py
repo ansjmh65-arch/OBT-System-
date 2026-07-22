@@ -2681,3 +2681,41 @@ class StaffWarningModel(db.Model):
         db.DateTime,
         default=datetime.utcnow
     )
+class ApplicationFormModel(db.Model):
+    __tablename__ = "applications"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32)
+    )
+
+    user_id = db.Column(
+        db.String(32)
+    )
+
+    type = db.Column(
+        db.String(50)
+    )
+
+    answers = db.Column(
+        db.Text
+    )
+
+    status = db.Column(
+        db.String(20),
+        default="pending"
+    )
+
+    reviewed_by = db.Column(
+        db.String(32),
+        nullable=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
