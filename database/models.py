@@ -1,15 +1,16 @@
-# -*- coding: utf-8 -*-
+# ==========================
+# Security Models
+# ==========================
 
-from datetime import datetime
-from . import db
 
+class SecuritySettingsModel(db.Model):
+    __tablename__ = "security_settings"
 
-class ServerConfigModel(db.Model):
-    __tablename__ = "server_configs"
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
 
-    id = db.Column(db.Integer, primary_key=True)
-
-    # معلومات السيرفر
     guild_id = db.Column(
         db.String(32),
         unique=True,
@@ -17,96 +18,96 @@ class ServerConfigModel(db.Model):
         index=True
     )
 
-    prefix = db.Column(
-        db.String(10),
-        default="!",
-        nullable=False
-    )
 
-    language = db.Column(
-        db.String(10),
-        default="ar",
-        nullable=False
-    )
-
-    timezone = db.Column(
-        db.String(50),
-        default="UTC",
-        nullable=False
-    )
-
-    embed_color = db.Column(
-        db.String(20),
-        default="#5865F2",
-        nullable=False
-    )
-
-
-    # تفعيل الأنظمة
-    security_enabled = db.Column(
+    # تفعيل الحمايات
+    anti_spam = db.Column(
         db.Boolean,
         default=True,
         nullable=False
     )
 
-    tickets_enabled = db.Column(
+    anti_raid = db.Column(
         db.Boolean,
         default=True,
         nullable=False
     )
 
-    clans_enabled = db.Column(
+    anti_link = db.Column(
         db.Boolean,
         default=True,
         nullable=False
     )
 
-    economy_enabled = db.Column(
+    anti_mention = db.Column(
         db.Boolean,
         default=True,
         nullable=False
     )
 
-    levels_enabled = db.Column(
+    anti_webhook = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    anti_bot = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    anti_mass_role = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    anti_channel_delete = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    anti_role_delete = db.Column(
         db.Boolean,
         default=True,
         nullable=False
     )
 
 
-    # الترحيب
-    welcome_enabled = db.Column(
-        db.Boolean,
-        default=False,
+    # إعدادات السبام
+    spam_limit = db.Column(
+        db.Integer,
+        default=5,
         nullable=False
     )
 
-    welcome_channel_id = db.Column(
-        db.String(32),
-        nullable=True
-    )
-
-    welcome_message = db.Column(
-        db.Text,
-        nullable=True
-    )
-
-
-    # المغادرة
-    goodbye_enabled = db.Column(
-        db.Boolean,
-        default=False,
+    spam_interval = db.Column(
+        db.Integer,
+        default=5,
         nullable=False
     )
 
-    goodbye_channel_id = db.Column(
-        db.String(32),
-        nullable=True
+
+    # إعدادات الرايد
+    raid_join_limit = db.Column(
+        db.Integer,
+        default=10,
+        nullable=False
     )
 
-    goodbye_message = db.Column(
-        db.Text,
-        nullable=True
+    raid_time = db.Column(
+        db.Integer,
+        default=10,
+        nullable=False
+    )
+
+
+    # العقوبات
+    punishment_type = db.Column(
+        db.String(30),
+        default="timeout",
+        nullable=False
     )
 
 
@@ -125,81 +126,8 @@ class ServerConfigModel(db.Model):
 
 
 
-class DashboardPermissionModel(db.Model):
-    __tablename__ = "dashboard_permissions"
-
-    id = db.Column(db.Integer, primary_key=True)
-
-    guild_id = db.Column(
-        db.String(32),
-        nullable=False,
-        index=True
-    )
-
-    user_id = db.Column(
-        db.String(32),
-        nullable=False,
-        index=True
-    )
-
-
-    # صلاحيات لوحة التحكم
-    can_view_dashboard = db.Column(
-        db.Boolean,
-        default=True,
-        nullable=False
-    )
-
-    can_manage_settings = db.Column(
-        db.Boolean,
-        default=False,
-        nullable=False
-    )
-
-    can_manage_security = db.Column(
-        db.Boolean,
-        default=False,
-        nullable=False
-    )
-
-    can_manage_tickets = db.Column(
-        db.Boolean,
-        default=False,
-        nullable=False
-    )
-
-    can_manage_clans = db.Column(
-        db.Boolean,
-        default=False,
-        nullable=False
-    )
-
-    can_view_logs = db.Column(
-        db.Boolean,
-        default=False,
-        nullable=False
-    )
-
-
-    created_at = db.Column(
-        db.DateTime,
-        default=datetime.utcnow,
-        nullable=False
-    )
-
-
-    __table_args__ = (
-        db.UniqueConstraint(
-            "guild_id",
-            "user_id",
-            name="guild_user_dashboard_permission_uc"
-        ),
-    )
-
-
-
-class AutoRoleModel(db.Model):
-    __tablename__ = "auto_roles"
+class SecurityWhitelistModel(db.Model):
+    __tablename__ = "security_whitelist"
 
     id = db.Column(
         db.Integer,
@@ -212,14 +140,120 @@ class AutoRoleModel(db.Model):
         index=True
     )
 
-    role_id = db.Column(
+    target_id = db.Column(
         db.String(32),
+        nullable=False
+    )
+
+    target_type = db.Column(
+        db.String(20),
+        default="user",
+        nullable=False
+    )
+
+    reason = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "guild_id",
+            "target_id",
+            name="security_whitelist_unique"
+        ),
+    )
+
+
+
+class SecurityLogModel(db.Model):
+    __tablename__ = "security_logs"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    user_id = db.Column(
+        db.String(32),
+        nullable=True
+    )
+
+    action = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    reason = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    details = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    severity = db.Column(
+        db.String(20),
+        default="medium",
+        nullable=False
+    )
+
+    timestamp = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+
+
+class AutoModRuleModel(db.Model):
+    __tablename__ = "automod_rules"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    rule_type = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+    value = db.Column(
+        db.Text,
         nullable=False
     )
 
     enabled = db.Column(
         db.Boolean,
         default=True,
+        nullable=False
+    )
+
+    action = db.Column(
+        db.String(30),
+        default="delete",
         nullable=False
     )
 
