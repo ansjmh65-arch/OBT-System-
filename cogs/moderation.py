@@ -1,78 +1,322 @@
+# -*- coding: utf-8 -*-
+
 import discord
 from discord.ext import commands
 
+from models import db, ModerationCase, Warning
+
+
 class ModerationCog(commands.Cog):
+
     def __init__(self, bot):
         self.bot = bot
 
-    # 1. أمر الحظر (Ban)
-    @commands.command(name="ban")
-    @commands.has_permissions(ban_members=True)
-    async def ban_member(self, ctx, member: discord.Member, *, reason=None):
-        if member == ctx.author:
-            await ctx.send("❌ لا يمكنك حظر نفسك!")
-            return
-        
-        await member.ban(reason=reason)
-        embed = discord.Embed(
-            title="🔨 تم حظر العضو",
-            description=f"تم حظر العضو **{member}** بنجاح.\n**السبب:** {reason or 'بدون سبب مخصص'}",
-            color=0xff0000
+
+    # ==========================
+    # إنشاء Case
+    # ==========================
+
+    def create_case(
+        self,
+        guild_id,
+        user_id,
+        moderator_id,
+        action,
+        reason
+    ):
+
+        case = ModerationCase(
+
+            guild_id=str(guild_id),
+
+            user_id=str(user_id),
+
+            moderator_id=str(moderator_id),
+
+            action=action,
+
+            reason=reason
+
         )
-        await ctx.send(embed=embed)
 
-    # 2. أمر الطرد (Kick)
-    @commands.command(name="kick")
-    @commands.has_permissions(kick_members=True)
-    async def kick_member(self, ctx, member: discord.Member, *, reason=None):
-        if member == ctx.author:
-            await ctx.send("❌ لا يمكنك طرد نفسك!")
-            return
-        
-        await member.kick(reason=reason)
-        embed = discord.Embed(
-            title="👢 تم طرد العضو",
-            description=f"تم طرد العضو **{member}** بنجاح.\n**السبب:** {reason or 'بدون سبب مخصص'}",
-            color=0xffaa00
+        db.session.add(case)
+        db.session.commit()
+
+
+
+    # ==========================
+    # Warn
+    # ==========================
+
+    @commands.command(
+        name="warn"
+    )
+    @commands.has_permissions(
+        manage_messages=True
+    )
+    async def warn(
+        self,
+        ctx,
+        member: discord.Member,
+        *,
+        reason="No reason"
+    ):
+
+        warning = Warning(
+
+            guild_id=str(ctx.guild.id),
+
+            user_id=str(member.id),
+
+            moderator_id=str(ctx.author.id),
+
+            reason=reason
+
         )
-        await ctx.send(embed=embed)
 
-    # 3. أمر مسح الرسائل (Purge / Clear)
-    @commands.command(name="clear", aliases=["purge"])
-    @commands.has_permissions(manage_messages=True)
-    async def clear_messages(self, ctx, amount: int = 10):
-        if amount <= 0:
-            await ctx.send("❌ يرجى تحديد عدد أكبر من الصفر لمسح الرسائل.")
-            return
 
-        deleted = await ctx.channel.purge(limit=amount + 1)
-        msg = await ctx.send(f"🧹 تم مسح **{len(deleted) - 1}** رسالة بنجاح.")
-        await msg.delete(delay=4)
+        db.session.add(warning)
 
-    # 4. أمر قفل الروم (Lock)
-    @commands.command(name="lock")
-    @commands.has_permissions(manage_channels=True)
-    async def lock_channel(self, ctx):
-        await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=False)
-        embed = discord.Embed(
-            title="🔒 قفل الروم",
-            description="تم قفل هذه الروم بنجاح. لا يمكن للأعضاء الكتابة فيها حالياً.",
-            color=0x2b2d31
+        db.session.commit()
+
+
+        self.create_case(
+
+            ctx.guild.id,
+
+            member.id,
+
+            ctx.author.id,
+
+            "WARN",
+
+            reason
+
         )
-        await ctx.send(embed=embed)
 
-    # 5. أمر فتح الروم (Unlock)
-    @commands.command(name="unlock")
-    @commands.has_permissions(manage_channels=True)
-    async def unlock_channel(self, ctx):
-        await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=True)
+
         embed = discord.Embed(
-            title="🔓 فتح الروم",
-            description="تم فتح هذه الروم بنجاح. يمكن للأعضاء الكتابة الآن.",
-            color=0x23a55a
+
+            title="⚠️ Warning",
+
+            description=
+            f"{member.mention} تم تحذيره\n**السبب:** {reason}",
+
+            color=0xFFA500
+
         )
-        await ctx.send(embed=embed)
+
+
+        await ctx.send(
+            embed=embed
+        )
+
+
+
+    # ==========================
+    # Kick
+    # ==========================
+
+    @commands.command(
+        name="kick"
+    )
+    @commands.has_permissions(
+        kick_members=True
+    )
+    async def kick(
+        self,
+        ctx,
+        member: discord.Member,
+        *,
+        reason="No reason"
+    ):
+
+
+        await member.kick(
+            reason=reason
+        )
+
+
+        self.create_case(
+
+            ctx.guild.id,
+
+            member.id,
+
+            ctx.author.id,
+
+            "KICK",
+
+            reason
+
+        )
+
+
+        await ctx.send(
+            f"👢 تم طرد {member.mention}"
+        )
+
+
+
+    # ==========================
+    # Ban
+    # ==========================
+
+    @commands.command(
+        name="ban"
+    )
+    @commands.has_permissions(
+        ban_members=True
+    )
+    async def ban(
+        self,
+        ctx,
+        member: discord.Member,
+        *,
+        reason="No reason"
+    ):
+
+
+        await member.ban(
+            reason=reason
+        )
+
+
+        self.create_case(
+
+            ctx.guild.id,
+
+            member.id,
+
+            ctx.author.id,
+
+            "BAN",
+
+            reason
+
+        )
+
+
+        await ctx.send(
+            f"🔨 تم حظر {member.mention}"
+        )
+
+
+
+    # ==========================
+    # Timeout
+    # ==========================
+
+    @commands.command(
+        name="timeout"
+    )
+    @commands.has_permissions(
+        moderate_members=True
+    )
+    async def timeout(
+        self,
+        ctx,
+        member: discord.Member,
+        minutes: int = 10,
+        *,
+        reason="No reason"
+    ):
+
+
+        duration = discord.utils.utcnow()
+
+        duration += discord.timedelta(
+            minutes=minutes
+        )
+
+
+        await member.timeout(
+            duration,
+            reason=reason
+        )
+
+
+        self.create_case(
+
+            ctx.guild.id,
+
+            member.id,
+
+            ctx.author.id,
+
+            "TIMEOUT",
+
+            reason
+
+        )
+
+
+        await ctx.send(
+            f"⏱️ تم إعطاء {member.mention} تايم اوت لمدة {minutes} دقيقة"
+        )
+
+
+
+    # ==========================
+    # عرض التحذيرات
+    # ==========================
+
+    @commands.command(
+        name="warnings"
+    )
+    async def warnings(
+        self,
+        ctx,
+        member: discord.Member
+    ):
+
+
+        data = Warning.query.filter_by(
+
+            guild_id=str(ctx.guild.id),
+
+            user_id=str(member.id)
+
+        ).all()
+
+
+
+        embed = discord.Embed(
+
+            title=f"⚠️ تحذيرات {member}",
+
+            color=0x5865F2
+
+        )
+
+
+        if not data:
+
+            embed.description = "لا توجد تحذيرات"
+
+        else:
+
+            for warn in data:
+
+                embed.add_field(
+
+                    name="تحذير",
+
+                    value=warn.reason,
+
+                    inline=False
+
+                )
+
+
+        await ctx.send(
+            embed=embed
+        )
+
+
 
 async def setup(bot):
-    await bot.add_cog(ModerationCog(bot))
-  
+
+    await bot.add_cog(
+        ModerationCog(bot)
+    )
