@@ -1,23 +1,60 @@
 # -*- coding: utf-8 -*-
-import logging
+
+import os
 from sqlalchemy import create_engine
-from . import db
+from sqlalchemy.orm import sessionmaker, scoped_session
 
-logger = logging.getLogger("OBT.Database")
+from .models import Base
 
-class DatabaseManager:
-    @staticmethod
-    async def initialize_database(app) -> None:
-        """تهيئة قاعدة البيانات بشكل مباشر لتفادي أخطاء الـ Context"""
-        try:
-            # إنشاء اتصال مباشر بقاعدة البيانات (يفضل استخدام مسار ملفك الفعلي)
-            # إذا كان لديك مسار مختلف ضعه هنا بدلاً من sqlite:///database.db
-            engine = create_engine("sqlite:///database.db")
-            
-            # بناء الجداول مباشرة باستخدام المحرك متجاهلين Flask تماماً
-            db.metadata.create_all(engine)
-            
-            logger.info("Database schemas initialized successfully without Flask context!")
-        except Exception as e:
-            logger.error(f"Failed to initialize database: {e}")
-            
+
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "sqlite:///obt_system.db"
+)
+
+
+engine = create_engine(
+    DATABASE_URL,
+    echo=False,
+    connect_args={
+        "check_same_thread": False
+    } if DATABASE_URL.startswith("sqlite") else {}
+)
+
+
+SessionLocal = scoped_session(
+    sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=engine
+    )
+)
+
+
+def init_database():
+    """
+    إنشاء جميع جداول قاعدة البيانات
+    """
+    Base.metadata.create_all(
+        bind=engine
+    )
+
+
+def get_db():
+    """
+    جلسة قاعدة البيانات
+    """
+    db = SessionLocal()
+
+    try:
+        return db
+
+    finally:
+        db.close()
+
+
+def close_database():
+    """
+    إغلاق الاتصال
+    """
+    SessionLocal.remove()
