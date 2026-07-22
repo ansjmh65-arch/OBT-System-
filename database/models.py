@@ -1212,3 +1212,150 @@ class LeaderboardModel(db.Model):
         default=datetime.utcnow,
         onupdate=datetime.utcnow
     )
+# ==========================
+# AI System Models
+# ==========================
+
+
+class AISettingsModel(db.Model):
+    __tablename__ = "ai_settings"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    enabled = db.Column(
+        db.Boolean,
+        default=False,
+        nullable=False
+    )
+
+    allowed_channels = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    personality = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    system_prompt = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    memory_limit = db.Column(
+        db.Integer,
+        default=20,
+        nullable=False
+    )
+
+    cooldown = db.Column(
+        db.Integer,
+        default=5,
+        nullable=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False
+    )
+
+
+
+class AIConversationModel(db.Model):
+    __tablename__ = "ai_conversations"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    user_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    message = db.Column(
+        db.Text,
+        nullable=False
+    )
+
+    response = db.Column(
+        db.Text,
+        nullable=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+
+
+class AutoResponseModel(db.Model):
+    __tablename__ = "auto_responses"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    trigger = db.Column(
+        db.String(255),
+        nullable=False
+    )
+
+    response = db.Column(
+        db.Text,
+        nullable=False
+    )
+
+    match_type = db.Column(
+        db.String(30),
+        default="contains",
+        nullable=False
+    )
+
+    enabled = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
