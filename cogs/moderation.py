@@ -1,20 +1,23 @@
 # -*- coding: utf-8 -*-
 
+from datetime import timedelta, datetime
+
 import discord
 from discord.ext import commands
 
-from models import db, ModerationCase, Warning
+from models import (
+    db,
+    ModerationCaseModel,
+    WarningModel
+)
 
 
 class ModerationCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.cases = {}
 
-
-    # ==========================
-    # إنشاء Case
-    # ==========================
 
     def create_case(
         self,
@@ -22,12 +25,23 @@ class ModerationCog(commands.Cog):
         user_id,
         moderator_id,
         action,
-        reason
+        reason,
+        duration=None
     ):
 
-        case = ModerationCase(
+        case = self.cases.get(
+            guild_id,
+            0
+        ) + 1
+
+        self.cases[guild_id] = case
+
+
+        data = ModerationCaseModel(
 
             guild_id=str(guild_id),
+
+            case_id=case,
 
             user_id=str(user_id),
 
@@ -35,18 +49,20 @@ class ModerationCog(commands.Cog):
 
             action=action,
 
-            reason=reason
+            reason=reason,
+
+            duration=duration
 
         )
 
-        db.session.add(case)
+
+        db.session.add(data)
         db.session.commit()
 
 
+        return case
 
-    # ==========================
-    # Warn
-    # ==========================
+
 
     @commands.command(
         name="warn"
@@ -62,7 +78,8 @@ class ModerationCog(commands.Cog):
         reason="No reason"
     ):
 
-        warning = Warning(
+
+        warning = WarningModel(
 
             guild_id=str(ctx.guild.id),
 
@@ -70,17 +87,19 @@ class ModerationCog(commands.Cog):
 
             moderator_id=str(ctx.author.id),
 
-            reason=reason
+            reason=reason,
+
+            points=1
 
         )
 
 
-        db.session.add(warning)
+        db.session.add(
+            warning
+        )
 
-        db.session.commit()
 
-
-        self.create_case(
+        case = self.create_case(
 
             ctx.guild.id,
 
@@ -95,27 +114,15 @@ class ModerationCog(commands.Cog):
         )
 
 
-        embed = discord.Embed(
+        db.session.commit()
 
-            title="⚠️ Warning",
-
-            description=
-            f"{member.mention} تم تحذيره\n**السبب:** {reason}",
-
-            color=0xFFA500
-
-        )
 
 
         await ctx.send(
-            embed=embed
+            f"⚠️ تم تحذير {member.mention}\nCase: `{case}`"
         )
 
 
-
-    # ==========================
-    # Kick
-    # ==========================
 
     @commands.command(
         name="kick"
@@ -132,12 +139,7 @@ class ModerationCog(commands.Cog):
     ):
 
 
-        await member.kick(
-            reason=reason
-        )
-
-
-        self.create_case(
+        case = self.create_case(
 
             ctx.guild.id,
 
@@ -152,15 +154,16 @@ class ModerationCog(commands.Cog):
         )
 
 
-        await ctx.send(
-            f"👢 تم طرد {member.mention}"
+        await member.kick(
+            reason=reason
         )
 
 
+        await ctx.send(
+            f"👢 تم طرد {member.mention}\nCase: `{case}`"
+        )
 
-    # ==========================
-    # Ban
-    # ==========================
+
 
     @commands.command(
         name="ban"
@@ -177,12 +180,7 @@ class ModerationCog(commands.Cog):
     ):
 
 
-        await member.ban(
-            reason=reason
-        )
-
-
-        self.create_case(
+        case = self.create_case(
 
             ctx.guild.id,
 
@@ -197,15 +195,16 @@ class ModerationCog(commands.Cog):
         )
 
 
-        await ctx.send(
-            f"🔨 تم حظر {member.mention}"
+        await member.ban(
+            reason=reason
         )
 
 
+        await ctx.send(
+            f"🔨 تم حظر {member.mention}\nCase: `{case}`"
+        )
 
-    # ==========================
-    # Timeout
-    # ==========================
+
 
     @commands.command(
         name="timeout"
@@ -217,26 +216,13 @@ class ModerationCog(commands.Cog):
         self,
         ctx,
         member: discord.Member,
-        minutes: int = 10,
+        minutes: int = 5,
         *,
         reason="No reason"
     ):
 
 
-        duration = discord.utils.utcnow()
-
-        duration += discord.timedelta(
-            minutes=minutes
-        )
-
-
-        await member.timeout(
-            duration,
-            reason=reason
-        )
-
-
-        self.create_case(
+        case = self.create_case(
 
             ctx.guild.id,
 
@@ -246,67 +232,72 @@ class ModerationCog(commands.Cog):
 
             "TIMEOUT",
 
-            reason
+            reason,
 
+            minutes
+
+        )
+
+
+        await member.timeout(
+            timedelta(
+                minutes=minutes
+            ),
+            reason=reason
         )
 
 
         await ctx.send(
-            f"⏱️ تم إعطاء {member.mention} تايم اوت لمدة {minutes} دقيقة"
+            f"⏳ تم إسكات {member.mention} لمدة {minutes} دقيقة\nCase: `{case}`"
         )
 
 
 
-    # ==========================
-    # عرض التحذيرات
-    # ==========================
-
     @commands.command(
-        name="warnings"
+        name="cases"
     )
-    async def warnings(
+    @commands.has_permissions(
+        manage_messages=True
+    )
+    async def cases(
         self,
         ctx,
         member: discord.Member
     ):
 
 
-        data = Warning.query.filter_by(
-
+        logs = ModerationCaseModel.query.filter_by(
             guild_id=str(ctx.guild.id),
-
             user_id=str(member.id)
-
         ).all()
 
 
+        if not logs:
+
+            await ctx.send(
+                "لا توجد مخالفات."
+            )
+
+            return
+
 
         embed = discord.Embed(
-
-            title=f"⚠️ تحذيرات {member}",
-
+            title=f"📋 سجل {member}",
             color=0x5865F2
-
         )
 
 
-        if not data:
+        for case in logs[-10:]:
 
-            embed.description = "لا توجد تحذيرات"
+            embed.add_field(
 
-        else:
+                name=f"Case #{case.case_id}",
 
-            for warn in data:
+                value=f"{case.action}\n{case.reason}",
 
-                embed.add_field(
+                inline=False
 
-                    name="تحذير",
-
-                    value=warn.reason,
-
-                    inline=False
-
-                )
+            )
 
 
         await ctx.send(
@@ -319,4 +310,4 @@ async def setup(bot):
 
     await bot.add_cog(
         ModerationCog(bot)
-    )
+        )
