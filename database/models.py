@@ -1716,3 +1716,252 @@ class ModerationLogModel(db.Model):
         default=datetime.utcnow,
         nullable=False
     )
+# ==========================
+# Advanced Discord Logs Models
+# ==========================
+
+
+class LogSettingsModel(db.Model):
+    __tablename__ = "log_settings"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    enabled = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    log_channel_id = db.Column(
+        db.String(32),
+        nullable=True
+    )
+
+    # تشغيل أنواع اللوقات
+
+    message_logs = db.Column(
+        db.Boolean,
+        default=True
+    )
+
+    member_logs = db.Column(
+        db.Boolean,
+        default=True
+    )
+
+    role_logs = db.Column(
+        db.Boolean,
+        default=True
+    )
+
+    channel_logs = db.Column(
+        db.Boolean,
+        default=True
+    )
+
+    voice_logs = db.Column(
+        db.Boolean,
+        default=True
+    )
+
+    moderation_logs = db.Column(
+        db.Boolean,
+        default=True
+    )
+
+    invite_logs = db.Column(
+        db.Boolean,
+        default=True
+    )
+
+    bot_logs = db.Column(
+        db.Boolean,
+        default=True
+    )
+
+    webhook_logs = db.Column(
+        db.Boolean,
+        default=True
+    )
+
+    server_logs = db.Column(
+        db.Boolean,
+        default=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
+
+
+class DiscordLogModel(db.Model):
+    __tablename__ = "discord_logs"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    user_id = db.Column(
+        db.String(32),
+        nullable=True
+    )
+
+    executor_id = db.Column(
+        db.String(32),
+        nullable=True
+    )
+
+
+    # نوع الحدث
+    event_type = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+
+    # معلومات الحدث
+    target_id = db.Column(
+        db.String(32),
+        nullable=True
+    )
+
+    title = db.Column(
+        db.String(255),
+        nullable=True
+    )
+
+    description = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+
+    old_value = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+
+    new_value = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+
+    extra_data = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+
+
+# رسائل خاصة بالرسائل
+class MessageLogModel(db.Model):
+    __tablename__ = "message_logs"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+    user_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+    channel_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+    message_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+    action = db.Column(
+        db.String(30),
+        nullable=False
+    )
+
+    old_content = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    new_content = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
+
+
+# لوقات الفويس
+class VoiceLogModel(db.Model):
+    __tablename__ = "voice_logs"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+    user_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+    channel_id = db.Column(
+        db.String(32),
+        nullable=True
+    )
+
+    action = db.Column(
+        db.String(30),
+        nullable=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
