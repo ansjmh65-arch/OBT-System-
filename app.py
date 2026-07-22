@@ -6,10 +6,10 @@ import logging
 
 import discord
 from discord.ext import commands
-from quart import Quart, jsonify, render_template
+from quart import Quart, render_template, jsonify
 
-# قاعدة البيانات
-from database.database import init_db
+from database.database import init_database
+
 
 # ==========================
 # Logging
@@ -17,10 +17,8 @@ from database.database import init_db
 
 logging.basicConfig(
     level=logging.INFO,
-    format="[%(asctime)s] %(levelname)s - %(message)s"
+    format="%(asctime)s | %(levelname)s | %(message)s"
 )
-
-logger = logging.getLogger("OBT-System")
 
 
 # ==========================
@@ -35,18 +33,10 @@ app = Quart(
 
 
 # ==========================
-# Discord Bot Config
+# Discord Bot
 # ==========================
 
-intents = discord.Intents.default()
-
-intents.guilds = True
-intents.members = True
-intents.message_content = True
-intents.presences = True
-intents.messages = True
-intents.voice_states = True
-
+intents = discord.Intents.all()
 
 bot = commands.Bot(
     command_prefix="!",
@@ -58,256 +48,149 @@ bot = commands.Bot(
 # Dashboard Pages
 # ==========================
 
-VALID_PAGES = [
+PAGES = [
     "index",
-    "dashboard",
-    "analytics",
-    "backups",
-    "clans",
-    "creators",
-    "economy",
-    "logs",
-    "notifications",
     "security",
+    "tickets",
+    "clans",
+    "economy",
+    "creators",
+    "logs",
+    "backups",
     "settings",
-    "tickets"
+    "analytics"
 ]
 
 
-# ==========================
-# Dashboard Routes
-# ==========================
-
-
 @app.route("/")
-async def home():
-
+async def dashboard():
     return await render_template(
         "dashboard.html",
         active_page="index"
     )
 
 
+@app.route("/<page>")
+async def pages(page):
 
-@app.route("/<page_name>")
-async def dashboard_page(page_name):
-
-    if page_name not in VALID_PAGES:
-
+    if page not in PAGES:
         return await render_template(
             "dashboard.html",
             active_page="index"
         ), 404
 
-
     return await render_template(
         "dashboard.html",
-        active_page=page_name
+        active_page=page
     )
-
 
 
 # ==========================
 # API
 # ==========================
 
-
 @app.route("/api/status")
-async def api_status():
+async def status():
 
     return jsonify({
 
-        "status": "online",
+        "bot": bot.user.name if bot.user else None,
 
-        "bot_ready": bot.is_ready(),
+        "online": bot.is_ready(),
 
-        "bot_name":
-            str(bot.user)
-            if bot.user
-            else None,
-
-        "guilds":
+        "servers":
             len(bot.guilds)
-            if bot.is_ready()
-            else 0,
-
-        "users":
-            sum(
-                guild.member_count or 0
-                for guild in bot.guilds
-            )
             if bot.is_ready()
             else 0,
 
         "ping":
             round(bot.latency * 1000)
             if bot.is_ready()
-            else 0,
-
-        "database": "connected"
+            else 0
 
     })
 
 
-
 # ==========================
-# Discord Events
+# Bot Events
 # ==========================
-
 
 @bot.event
 async def on_ready():
 
-    logger.info(
-        f"Bot Started: {bot.user} | ID: {bot.user.id}"
+    logging.info(
+        f"Logged in as {bot.user}"
     )
-
-
-    try:
-
-        synced = await bot.tree.sync()
-
-        logger.info(
-            f"Synced {len(synced)} slash commands"
-        )
-
-    except Exception as error:
-
-        logger.error(
-            f"Slash sync error: {error}"
-        )
-
 
 
 # ==========================
 # Load Cogs
 # ==========================
 
+async def load_extensions():
 
-async def load_cogs():
+    cogs = [
 
-    folder = "cogs"
+        "cogs.security",
+        "cogs.tickets",
+        "cogs.moderation",
+        "cogs.logs",
+        "cogs.clans",
+        "cogs.economy",
+        "cogs.levels",
+        "cogs.welcome"
 
+    ]
 
-    if not os.path.exists(folder):
+    for cog in cogs:
 
-        logger.warning(
-            "Cogs folder not found"
-        )
+        try:
+            await bot.load_extension(cog)
 
-        return
+            logging.info(
+                f"Loaded {cog}"
+            )
 
+        except Exception as e:
 
-    for file in os.listdir(folder):
-
-        if file.endswith(".py"):
-
-            extension = f"{folder}.{file[:-3]}"
-
-            try:
-
-                await bot.load_extension(
-                    extension
-                )
-
-                logger.info(
-                    f"Loaded {extension}"
-                )
-
-
-            except Exception as error:
-
-                logger.error(
-                    f"Failed loading {extension}: {error}"
-                )
-
+            logging.warning(
+                f"Failed {cog}: {e}"
+            )
 
 
 # ==========================
-# Startup
+# Run Everything
 # ==========================
 
+async def main():
 
-@app.before_serving
-async def startup():
+    init_database()
 
-    logger.info(
-        "Starting OBT-System..."
-    )
-
-
-    # Database
-
-    try:
-
-        init_db(app)
-
-        logger.info(
-            "Database initialized"
-        )
-
-
-    except Exception as error:
-
-        logger.error(
-            f"Database error: {error}"
-        )
-
-
-    # Cogs
-
-    await load_cogs()
-
-
-    # Bot
+    await load_extensions()
 
     token = os.getenv(
         "DISCORD_TOKEN"
     )
 
-
     if not token:
-
-        logger.error(
+        raise Exception(
             "DISCORD_TOKEN missing"
         )
 
-        return
 
+    await asyncio.gather(
 
-    asyncio.create_task(
-        bot.start(token)
+        bot.start(token),
+
+        app.run_task(
+            host="0.0.0.0",
+            port=8080
+        )
+
     )
 
-
-
-# ==========================
-# Shutdown
-# ==========================
-
-
-@app.after_serving
-async def shutdown():
-
-    if not bot.is_closed():
-
-        await bot.close()
-
-
-    logger.info(
-        "OBT-System stopped"
-    )
-
-
-
-# ==========================
-# Run
-# ==========================
 
 
 if __name__ == "__main__":
 
-    app.run(
-        host="0.0.0.0",
-        port=8080
-    )
+    asyncio.run(main())
