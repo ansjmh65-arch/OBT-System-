@@ -1965,3 +1965,464 @@ class VoiceLogModel(db.Model):
         db.DateTime,
         default=datetime.utcnow
     )
+# ==========================
+# Backup System Models
+# ==========================
+
+from datetime import datetime
+from . import db
+
+
+# النسخ الرئيسية
+class BackupModel(db.Model):
+    __tablename__ = "backups"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    backup_id = db.Column(
+        db.String(100),
+        unique=True,
+        nullable=False
+    )
+
+    name = db.Column(
+        db.String(100),
+        default="Server Backup"
+    )
+
+    description = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+
+    # حجم النسخة
+    size = db.Column(
+        db.Integer,
+        default=0
+    )
+
+
+    # حالة النسخة
+    status = db.Column(
+        db.String(20),
+        default="completed"
+    )
+
+
+    # من قام بالنسخ
+    created_by = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
+
+
+# ==========================
+# Server Settings Backup
+# ==========================
+
+class BackupGuildSettingsModel(db.Model):
+    __tablename__ = "backup_guild_settings"
+
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+
+    backup_id = db.Column(
+        db.String(100),
+        nullable=False,
+        index=True
+    )
+
+
+    guild_name = db.Column(
+        db.String(100)
+    )
+
+
+    icon_url = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+
+    verification_level = db.Column(
+        db.String(50),
+        nullable=True
+    )
+
+
+    default_notifications = db.Column(
+        db.String(50),
+        nullable=True
+    )
+
+
+    data = db.Column(
+        db.Text,
+        nullable=False
+    )
+
+
+
+# ==========================
+# Roles Backup
+# ==========================
+
+class BackupRoleModel(db.Model):
+    __tablename__ = "backup_roles"
+
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+
+    backup_id = db.Column(
+        db.String(100),
+        nullable=False,
+        index=True
+    )
+
+
+    role_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+
+    name = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+
+    color = db.Column(
+        db.String(20),
+        nullable=True
+    )
+
+
+    position = db.Column(
+        db.Integer,
+        default=0
+    )
+
+
+    permissions = db.Column(
+        db.Text,
+        nullable=False
+    )
+
+
+    hoist = db.Column(
+        db.Boolean,
+        default=False
+    )
+
+
+    mentionable = db.Column(
+        db.Boolean,
+        default=False
+    )
+
+
+
+# ==========================
+# Channels Backup
+# ==========================
+
+class BackupChannelModel(db.Model):
+    __tablename__ = "backup_channels"
+
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+
+    backup_id = db.Column(
+        db.String(100),
+        nullable=False,
+        index=True
+    )
+
+
+    channel_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+
+    name = db.Column(
+        db.String(100)
+    )
+
+
+    channel_type = db.Column(
+        db.String(30)
+    )
+
+
+    position = db.Column(
+        db.Integer,
+        default=0
+    )
+
+
+    parent_id = db.Column(
+        db.String(32),
+        nullable=True
+    )
+
+
+    topic = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+
+    nsfw = db.Column(
+        db.Boolean,
+        default=False
+    )
+
+
+    slowmode = db.Column(
+        db.Integer,
+        default=0
+    )
+
+
+
+# ==========================
+# Channel Permissions Backup
+# ==========================
+
+class BackupPermissionModel(db.Model):
+    __tablename__ = "backup_permissions"
+
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+
+    backup_id = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+
+    channel_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+
+    target_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+
+    target_type = db.Column(
+        db.String(20),
+        default="role"
+    )
+
+
+    allow_permissions = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+
+    deny_permissions = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+
+
+# ==========================
+# Members Backup
+# ==========================
+
+class BackupMemberModel(db.Model):
+    __tablename__ = "backup_members"
+
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+
+    backup_id = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+
+    user_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+
+    nickname = db.Column(
+        db.String(100),
+        nullable=True
+    )
+
+
+    roles = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+
+
+# ==========================
+# Emoji Backup
+# ==========================
+
+class BackupEmojiModel(db.Model):
+    __tablename__ = "backup_emojis"
+
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+
+    backup_id = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+
+    emoji_id = db.Column(
+        db.String(32)
+    )
+
+
+    name = db.Column(
+        db.String(100)
+    )
+
+
+    url = db.Column(
+        db.Text
+    )
+
+
+
+# ==========================
+# Webhook Backup
+# ==========================
+
+class BackupWebhookModel(db.Model):
+    __tablename__ = "backup_webhooks"
+
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+
+    backup_id = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+
+    webhook_id = db.Column(
+        db.String(32)
+    )
+
+
+    name = db.Column(
+        db.String(100)
+    )
+
+
+    channel_id = db.Column(
+        db.String(32)
+    )
+
+
+
+# ==========================
+# Restore History
+# ==========================
+
+class RestoreHistoryModel(db.Model):
+    __tablename__ = "restore_history"
+
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+
+    backup_id = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+
+    restored_by = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+
+    status = db.Column(
+        db.String(20),
+        default="success"
+    )
+
+
+    details = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
