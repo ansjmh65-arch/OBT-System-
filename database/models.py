@@ -2620,3 +2620,64 @@ class ContentCreatorModel(db.Model):
         db.DateTime,
         default=datetime.utcnow
     )
+class StaffMemberModel(db.Model):
+    __tablename__ = "staff_members"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+    user_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+    role_name = db.Column(
+        db.String(100)
+    )
+
+    department = db.Column(
+        db.String(50)
+    )
+
+    joined_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
+
+
+class StaffWarningModel(db.Model):
+    __tablename__ = "staff_warnings"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32)
+    )
+
+    staff_id = db.Column(
+        db.String(32)
+    )
+
+    reason = db.Column(
+        db.Text
+    )
+
+    issued_by = db.Column(
+        db.String(32)
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
