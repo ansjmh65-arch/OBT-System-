@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 from datetime import datetime
 from . import db
 
@@ -41,7 +42,7 @@ class ServerConfigModel(db.Model):
     )
 
 
-    # حالة الأنظمة
+    # تفعيل الأنظمة
     security_enabled = db.Column(
         db.Boolean,
         default=True,
@@ -73,7 +74,7 @@ class ServerConfigModel(db.Model):
     )
 
 
-    # إعدادات الترحيب
+    # الترحيب
     welcome_enabled = db.Column(
         db.Boolean,
         default=False,
@@ -91,7 +92,7 @@ class ServerConfigModel(db.Model):
     )
 
 
-    # إعدادات المغادرة
+    # المغادرة
     goodbye_enabled = db.Column(
         db.Boolean,
         default=False,
@@ -109,7 +110,6 @@ class ServerConfigModel(db.Model):
     )
 
 
-    # الوقت
     created_at = db.Column(
         db.DateTime,
         default=datetime.utcnow,
@@ -120,5 +120,111 @@ class ServerConfigModel(db.Model):
         db.DateTime,
         default=datetime.utcnow,
         onupdate=datetime.utcnow,
+        nullable=False
+    )
+
+
+
+class DashboardPermissionModel(db.Model):
+    __tablename__ = "dashboard_permissions"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    user_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+
+    # صلاحيات لوحة التحكم
+    can_view_dashboard = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    can_manage_settings = db.Column(
+        db.Boolean,
+        default=False,
+        nullable=False
+    )
+
+    can_manage_security = db.Column(
+        db.Boolean,
+        default=False,
+        nullable=False
+    )
+
+    can_manage_tickets = db.Column(
+        db.Boolean,
+        default=False,
+        nullable=False
+    )
+
+    can_manage_clans = db.Column(
+        db.Boolean,
+        default=False,
+        nullable=False
+    )
+
+    can_view_logs = db.Column(
+        db.Boolean,
+        default=False,
+        nullable=False
+    )
+
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "guild_id",
+            "user_id",
+            name="guild_user_dashboard_permission_uc"
+        ),
+    )
+
+
+
+class AutoRoleModel(db.Model):
+    __tablename__ = "auto_roles"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    role_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+    enabled = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
         nullable=False
     )
