@@ -644,3 +644,262 @@ class TicketRatingModel(db.Model):
         default=datetime.utcnow,
         nullable=False
     )
+# ==========================
+# Clan System Models
+# ==========================
+
+
+class ClanModel(db.Model):
+    __tablename__ = "clans"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    clan_id = db.Column(
+        db.String(32),
+        unique=True,
+        nullable=False
+    )
+
+    name = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    description = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    owner_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+    icon = db.Column(
+        db.String(255),
+        nullable=True
+    )
+
+
+    # نظام التقدم
+    level = db.Column(
+        db.Integer,
+        default=1,
+        nullable=False
+    )
+
+    points = db.Column(
+        db.Integer,
+        default=0,
+        nullable=False
+    )
+
+    members_limit = db.Column(
+        db.Integer,
+        default=10,
+        nullable=False
+    )
+
+
+    status = db.Column(
+        db.String(20),
+        default="active",
+        nullable=False
+    )
+
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False
+    )
+
+
+
+class ClanMemberModel(db.Model):
+    __tablename__ = "clan_members"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    clan_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    user_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+
+    role = db.Column(
+        db.String(30),
+        default="member",
+        nullable=False
+    )
+
+
+    points = db.Column(
+        db.Integer,
+        default=0,
+        nullable=False
+    )
+
+
+    joined_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "clan_id",
+            "user_id",
+            name="clan_member_unique"
+        ),
+    )
+
+
+
+class ClanPointsLogModel(db.Model):
+    __tablename__ = "clan_points_logs"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    clan_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    user_id = db.Column(
+        db.String(32),
+        nullable=True
+    )
+
+
+    points = db.Column(
+        db.Integer,
+        nullable=False
+    )
+
+
+    reason = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+
+    action_type = db.Column(
+        db.String(30),
+        default="add",
+        nullable=False
+    )
+
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+
+
+class ClanRankModel(db.Model):
+    __tablename__ = "clan_ranks"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    clan_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+
+    name = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+
+    permissions = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+
+
+class ClanRewardModel(db.Model):
+    __tablename__ = "clan_rewards"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+
+    required_points = db.Column(
+        db.Integer,
+        nullable=False
+    )
+
+
+    reward_type = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+
+    reward_value = db.Column(
+        db.String(255),
+        nullable=False
+    )
+
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
