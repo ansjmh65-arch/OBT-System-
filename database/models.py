@@ -1359,3 +1359,156 @@ class AutoResponseModel(db.Model):
         default=datetime.utcnow,
         nullable=False
     )
+# ==========================
+# Command System Models
+# ==========================
+
+
+class CommandSettingsModel(db.Model):
+    __tablename__ = "command_settings"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    prefix = db.Column(
+        db.String(10),
+        default="!",
+        nullable=False
+    )
+
+    slash_commands_enabled = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    commands_enabled = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    disabled_commands = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False
+    )
+
+
+
+class CustomCommandModel(db.Model):
+    __tablename__ = "custom_commands"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    command_name = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    response = db.Column(
+        db.Text,
+        nullable=False
+    )
+
+    command_type = db.Column(
+        db.String(30),
+        default="text",
+        nullable=False
+    )
+
+    required_role_id = db.Column(
+        db.String(32),
+        nullable=True
+    )
+
+    cooldown = db.Column(
+        db.Integer,
+        default=0,
+        nullable=False
+    )
+
+    enabled = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+
+
+class CommandUsageLogModel(db.Model):
+    __tablename__ = "command_usage_logs"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    guild_id = db.Column(
+        db.String(32),
+        nullable=False,
+        index=True
+    )
+
+    user_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+    command = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    channel_id = db.Column(
+        db.String(32),
+        nullable=False
+    )
+
+    success = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    timestamp = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
