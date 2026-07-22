@@ -3,128 +3,91 @@
 import discord
 from discord.ext import commands
 
-from models import db, TicketSettings, Ticket
+from models import (
+    db,
+    TicketSettingsModel,
+    TicketModel
+)
 
 
-class TicketCog(commands.Cog):
+class TicketView(discord.ui.View):
 
     def __init__(self, bot):
+        super().__init__(timeout=None)
         self.bot = bot
 
 
-    # ==========================
-    # جلب إعدادات التذاكر
-    # ==========================
+    @discord.ui.button(
+        label="فتح تذكرة",
+        emoji="🎫",
+        style=discord.ButtonStyle.green,
+        custom_id="create_ticket"
+    )
+    async def create_ticket(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button
+    ):
 
-    def get_settings(self, guild_id):
+        guild = interaction.guild
+        user = interaction.user
 
-        settings = TicketSettings.query.filter_by(
-            guild_id=str(guild_id)
+
+        settings = TicketSettingsModel.query.filter_by(
+            guild_id=str(guild.id)
         ).first()
 
-        if not settings:
 
-            settings = TicketSettings(
-                guild_id=str(guild_id),
-                enabled=True
+        if not settings:
+            settings = TicketSettingsModel(
+                guild_id=str(guild.id)
             )
 
             db.session.add(settings)
             db.session.commit()
 
-        return settings
 
-
-
-    # ==========================
-    # إنشاء تذكرة
-    # ==========================
-
-    @commands.command(
-        name="ticket"
-    )
-    async def create_ticket(
-        self,
-        ctx
-    ):
-
-        settings = self.get_settings(
-            ctx.guild.id
-        )
-
-
-        if not settings.enabled:
-
-            return await ctx.send(
-                "❌ نظام التذاكر مغلق."
-            )
-
-
-
-        existing = Ticket.query.filter_by(
-            guild_id=str(ctx.guild.id),
-            owner_id=str(ctx.author.id),
+        old_ticket = TicketModel.query.filter_by(
+            guild_id=str(guild.id),
+            owner_id=str(user.id),
             status="open"
         ).first()
 
 
-        if existing:
+        if old_ticket:
 
-            return await ctx.send(
-                "⚠️ لديك تذكرة مفتوحة بالفعل."
+            await interaction.response.send_message(
+                "❌ لديك تذكرة مفتوحة بالفعل.",
+                ephemeral=True
             )
+            return
 
 
 
         category = None
 
+        if settings.ticket_category_id:
 
-        if settings.category_id:
-
-            category = discord.utils.get(
-                ctx.guild.categories,
-                id=int(settings.category_id)
+            category = guild.get_channel(
+                int(settings.ticket_category_id)
             )
 
 
-
-        overwrites = {
-
-            ctx.guild.default_role:
-            discord.PermissionOverwrite(
-                view_channel=False
-            ),
-
-
-            ctx.author:
-            discord.PermissionOverwrite(
-                view_channel=True,
-                send_messages=True
-            )
-
-        }
-
-
-
-        channel = await ctx.guild.create_text_channel(
-
-            name=f"ticket-{ctx.author.name}",
-
-            category=category,
-
-            overwrites=overwrites
-
+        channel = await guild.create_text_channel(
+            name=f"ticket-{user.name}",
+            category=category
         )
 
 
+        ticket = TicketModel(
 
-        ticket = Ticket(
+            guild_id=str(guild.id),
 
-            guild_id=str(ctx.guild.id),
+            ticket_number=channel.id,
 
             channel_id=str(channel.id),
 
-            owner_id=str(ctx.author.id),
+            owner_id=str(user.id),
 
             status="open"
 
@@ -137,129 +100,110 @@ class TicketCog(commands.Cog):
 
 
 
+        await channel.set_permissions(
+            user,
+            view_channel=True,
+            send_messages=True
+        )
+
+
         embed = discord.Embed(
-
-            title="🎫 Ticket",
-
+            title="🎫 تذكرة الدعم",
             description=
-            "اكتب مشكلتك هنا وسيتم الرد عليك من الإدارة.",
-
+            "أهلاً بك\n"
+            "اكتب مشكلتك وسيقوم فريق الدعم بالرد عليك.",
             color=0x5865F2
-
         )
 
 
         embed.set_footer(
-            text="OBT System"
+            text=f"Ticket ID: {ticket.id}"
         )
 
 
         await channel.send(
-            content=ctx.author.mention,
-            embed=embed
+            content=user.mention,
+            embed=embed,
+            view=CloseTicketView()
         )
 
 
-        await ctx.send(
-            f"✅ تم إنشاء التذكرة: {channel.mention}"
+        await interaction.response.send_message(
+            f"✅ تم إنشاء تذكرتك: {channel.mention}",
+            ephemeral=True
         )
 
 
 
-    # ==========================
-    # إغلاق التذكرة
-    # ==========================
 
-    @commands.command(
-        name="close"
+class CloseTicketView(discord.ui.View):
+
+    def __init__(self):
+        super().__init__(timeout=None)
+
+
+    @discord.ui.button(
+        label="إغلاق التذكرة",
+        emoji="🔒",
+        style=discord.ButtonStyle.red,
+        custom_id="close_ticket"
     )
     async def close_ticket(
         self,
-        ctx
+        interaction: discord.Interaction,
+        button: discord.ui.Button
     ):
 
+        channel = interaction.channel
 
-        ticket = Ticket.query.filter_by(
 
-            channel_id=str(ctx.channel.id),
-
-            status="open"
-
+        ticket = TicketModel.query.filter_by(
+            channel_id=str(channel.id)
         ).first()
 
 
+        if ticket:
 
-        if not ticket:
+            ticket.status = "closed"
 
-            return await ctx.send(
-                "❌ هذه ليست تذكرة."
-            )
-
+            db.session.commit()
 
 
-        ticket.status = "closed"
-
-        db.session.commit()
-
-
-
-        await ctx.send(
-            "🔒 سيتم إغلاق التذكرة."
+        await interaction.response.send_message(
+            "🔒 سيتم إغلاق التذكرة.",
         )
 
 
-        await ctx.channel.delete()
+        await channel.delete()
 
 
 
-    # ==========================
-    # إعداد لوحة التذاكر
-    # ==========================
+class TicketCog(commands.Cog):
+
+    def __init__(self, bot):
+        self.bot = bot
+
 
     @commands.command(
-        name="ticketsetup"
+        name="ticketpanel"
     )
-    @commands.has_permissions(
-        administrator=True
-    )
-    async def ticket_setup(
+    @commands.has_permissions(administrator=True)
+    async def ticket_panel(
         self,
         ctx
     ):
 
-
-        settings = self.get_settings(
-            ctx.guild.id
-        )
-
-
-        settings.enabled = True
-
-
-        settings.category_id = str(
-            ctx.channel.category.id
-        ) if ctx.channel.category else None
-
-
-
-        db.session.commit()
-
-
-
         embed = discord.Embed(
-
-            title="🎫 نظام التذاكر",
-
+            title="🎫 الدعم الفني",
             description=
-            "اكتب !ticket لإنشاء تذكرة.",
-
+            "اضغط الزر لإنشاء تذكرة.",
             color=0x5865F2
-
         )
 
 
         await ctx.send(
-            embed=embed
+            embed=embed,
+            view=TicketView(self.bot)
         )
 
 
