@@ -2,37 +2,123 @@
 from datetime import datetime
 from . import db
 
+
 class ServerConfigModel(db.Model):
-    __tablename__ = 'server_configs'
-    id = db.Column(db.Integer, primary_key=True)
-    guild_id = db.Column(db.String(32), unique=True, nullable=False, index=True)
-    prefix = db.Column(db.String(10), default="!", nullable=False)
-    language = db.Column(db.String(10), default="ar", nullable=False)
-    is_active = db.Column(db.Boolean, default=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    __tablename__ = "server_configs"
 
-class UserModel(db.Model):
-    __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(32), unique=True, nullable=False, index=True)
-    username = db.Column(db.String(128), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-class EconomyModel(db.Model):
-    __tablename__ = 'economy'
-    id = db.Column(db.Integer, primary_key=True)
-    guild_id = db.Column(db.String(32), nullable=False, index=True)
-    user_id = db.Column(db.String(32), nullable=False, index=True)
-    balance = db.Column(db.Integer, default=100, nullable=False)
-    bank = db.Column(db.Integer, default=0, nullable=False)
-    __table_args__ = (db.UniqueConstraint('guild_id', 'user_id', name='_guild_user_economy_uc'),)
+    # معلومات السيرفر
+    guild_id = db.Column(
+        db.String(32),
+        unique=True,
+        nullable=False,
+        index=True
+    )
 
-class AuditLogModel(db.Model):
-    __tablename__ = 'audit_logs'
-    id = db.Column(db.Integer, primary_key=True)
-    guild_id = db.Column(db.String(32), nullable=False, index=True)
-    action = db.Column(db.String(128), nullable=False)
-    executor_id = db.Column(db.String(32), nullable=False)
-    details = db.Column(db.Text, nullable=True)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-  
+    prefix = db.Column(
+        db.String(10),
+        default="!",
+        nullable=False
+    )
+
+    language = db.Column(
+        db.String(10),
+        default="ar",
+        nullable=False
+    )
+
+    timezone = db.Column(
+        db.String(50),
+        default="UTC",
+        nullable=False
+    )
+
+    embed_color = db.Column(
+        db.String(20),
+        default="#5865F2",
+        nullable=False
+    )
+
+
+    # حالة الأنظمة
+    security_enabled = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    tickets_enabled = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    clans_enabled = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    economy_enabled = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+    levels_enabled = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+
+
+    # إعدادات الترحيب
+    welcome_enabled = db.Column(
+        db.Boolean,
+        default=False,
+        nullable=False
+    )
+
+    welcome_channel_id = db.Column(
+        db.String(32),
+        nullable=True
+    )
+
+    welcome_message = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+
+    # إعدادات المغادرة
+    goodbye_enabled = db.Column(
+        db.Boolean,
+        default=False,
+        nullable=False
+    )
+
+    goodbye_channel_id = db.Column(
+        db.String(32),
+        nullable=True
+    )
+
+    goodbye_message = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+
+    # الوقت
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False
+    )
